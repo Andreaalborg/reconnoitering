@@ -5,6 +5,7 @@ export interface IUser extends Document {
   password: string;
   name: string;
   role: string;
+  image?: string; // Added image field
   favoriteExhibitions?: string[];
   createdAt: Date;
 }
@@ -27,6 +28,10 @@ const UserSchema: Schema = new Schema({
     type: String,
     enum: ['admin', 'user'],
     default: 'user'
+  },
+  image: {
+    type: String,
+    default: ''
   },
   favoriteExhibitions: [{
     type: mongoose.Schema.Types.ObjectId,

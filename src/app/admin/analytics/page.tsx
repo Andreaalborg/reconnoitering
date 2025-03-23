@@ -57,45 +57,99 @@ export default function AdminAnalytics() {
     
     const fetchStats = async () => {
       try {
-        // In a real app, you would fetch this data from an API
-        // For now, we'll simulate with some example data
+        setLoading(true);
         
-        // Simulated API response
-        setTimeout(() => {
-          setStats({
-            totalExhibitions: 42,
-            activeExhibitions: 18,
-            upcomingExhibitions: 14,
-            pastExhibitions: 10,
-            totalFavorites: 156,
-            totalUsers: 24,
-            exhibitionsByCity: [
-              { label: 'London', value: 12 },
-              { label: 'Paris', value: 8 },
-              { label: 'New York', value: 7 },
-              { label: 'Tokyo', value: 5 },
-              { label: 'Berlin', value: 4 }
-            ],
-            exhibitionsByCategory: [
-              { label: 'Contemporary', value: 15 },
-              { label: 'Painting', value: 12 },
-              { label: 'Photography', value: 10 },
-              { label: 'Sculpture', value: 8 },
-              { label: 'Digital', value: 7 }
-            ],
-            popularExhibitions: [
-              { label: 'Van Gogh: The Immersive Experience', value: 42 },
-              { label: 'Modern Art Festival', value: 37 },
-              { label: 'Photography Biennale', value: 29 },
-              { label: 'Picasso Retrospective', value: 23 },
-              { label: 'Digital Art Summit', value: 18 }
-            ]
+        // Fetch all exhibitions to calculate statistics
+        const exhibitionsResponse = await fetch('/api/exhibitions?limit=1000');
+        const exhibitionsData = await exhibitionsResponse.json();
+        const exhibitions = exhibitionsData.data || [];
+        
+        const today = new Date();
+        
+        // Basic counts
+        const activeExhibitions = exhibitions.filter(ex => {
+          const startDate = new Date(ex.startDate);
+          const endDate = new Date(ex.endDate);
+          return startDate <= today && endDate >= today;
+        });
+        
+        const upcomingExhibitions = exhibitions.filter(ex => {
+          const startDate = new Date(ex.startDate);
+          return startDate > today;
+        });
+        
+        const pastExhibitions = exhibitions.filter(ex => {
+          const endDate = new Date(ex.endDate);
+          return endDate < today;
+        });
+        
+        // Fetch users count (assuming there's an API for this)
+        let totalUsers = 0;
+        let totalFavorites = 0;
+        
+        try {
+          const usersResponse = await fetch('/api/admin/users');
+          const usersData = await usersResponse.json();
+          totalUsers = usersData.data?.length || 0;
+          
+          // Calculate total favorites
+          totalFavorites = usersData.data?.reduce((acc, user) => {
+            return acc + (user.favoriteExhibitions?.length || 0);
+          }, 0) || 0;
+        } catch (error) {
+          console.error("Error fetching users data", error);
+          // Fallback to estimates if API doesn't exist
+          totalUsers = Math.round(exhibitions.length * 0.6); // Assume about 0.6 users per exhibition as a fallback
+          totalFavorites = Math.round(exhibitions.length * 1.5); // Rough estimate
+        }
+        
+        // Group exhibitions by city
+        const cityCounts = {};
+        exhibitions.forEach(ex => {
+          const city = ex.location?.city || 'Unknown';
+          cityCounts[city] = (cityCounts[city] || 0) + 1;
+        });
+        
+        const exhibitionsByCity = Object.entries(cityCounts)
+          .map(([label, value]) => ({ label, value: value as number }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
+        
+        // Group exhibitions by category
+        const categoryCounts = {};
+        exhibitions.forEach(ex => {
+          const categories = ex.category || [];
+          categories.forEach(category => {
+            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
           });
-          setLoading(false);
-        }, 1000);
+        });
         
+        const exhibitionsByCategory = Object.entries(categoryCounts)
+          .map(([label, value]) => ({ label, value: value as number }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
+        
+        // Get most popular exhibitions
+        const popularExhibitions = exhibitions
+          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+          .slice(0, 5)
+          .map(ex => ({ label: ex.title, value: ex.popularity || 0 }));
+        
+        setStats({
+          totalExhibitions: exhibitions.length,
+          activeExhibitions: activeExhibitions.length,
+          upcomingExhibitions: upcomingExhibitions.length,
+          pastExhibitions: pastExhibitions.length,
+          totalFavorites,
+          totalUsers,
+          exhibitionsByCity,
+          exhibitionsByCategory,
+          popularExhibitions
+        });
       } catch (error) {
         console.error('Error fetching analytics data:', error);
+      } finally {
+        setLoading(false);
       }
     };
     

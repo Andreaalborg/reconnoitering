@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
+import VerticalCalendar from '@/components/VerticalCalendar';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
 
@@ -52,27 +53,35 @@ export default async function Home() {
           </div>
         </section>
         
-        {/* Upcoming Exhibitions */}
-        <section className="mb-16">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Upcoming Events</h2>
-            <Link href="/exhibitions?sort=startDate" className="text-rose-500 hover:underline">
-              Show all
-            </Link>
+        {/* Two-column layout for calendar and upcoming exhibitions */}
+        <section className="mb-16 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Vertical Calendar - Takes 1/3 of the space on large screens */}
+          <div className="lg:col-span-1">
+            <VerticalCalendar />
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {upcomingExhibitions.map((exhibition) => (
-              <ExhibitionCard
-                key={exhibition._id}
-                id={exhibition._id}
-                title={exhibition.title}
-                location={exhibition.location}
-                coverImage={exhibition.coverImage}
-                startDate={exhibition.startDate}
-                endDate={exhibition.endDate}
-              />
-            ))}
+          {/* Upcoming Exhibitions - Takes 2/3 of the space on large screens */}
+          <div className="lg:col-span-2">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Upcoming Events</h2>
+              <Link href="/exhibitions?sort=startDate" className="text-rose-500 hover:underline">
+                Show all
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {upcomingExhibitions.map((exhibition) => (
+                <ExhibitionCard
+                  key={exhibition._id}
+                  id={exhibition._id}
+                  title={exhibition.title}
+                  location={exhibition.location}
+                  coverImage={exhibition.coverImage}
+                  startDate={exhibition.startDate}
+                  endDate={exhibition.endDate}
+                />
+              ))}
+            </div>
           </div>
         </section>
         

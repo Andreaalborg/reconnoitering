@@ -29,7 +29,8 @@ export const authOptions = {
             id: user._id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role
+            role: user.role,
+            image: user.image, // Make sure to include image in the token
           };
         }
         
@@ -41,17 +42,27 @@ export const authOptions = {
     signIn: '/auth/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Initial sign in
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.image = user.image; // Add image to token
       }
+      
+      // Handle updates when the session is modified
+      if (trigger === "update" && session) {
+        if (session.user.name) token.name = session.user.name;
+        if (session.user.image) token.picture = session.user.image; // NextAuth uses 'picture' for images
+      }
+      
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.image = token.picture || token.image; // Use either 'picture' or 'image'
       }
       return session;
     }
