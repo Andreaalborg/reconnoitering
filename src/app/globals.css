@@ -83,3 +83,15 @@ body {
 .mapboxgl-ctrl-logo {
   margin: 0 !important;
 }
+
+/* Timeline CSS */
+.timeline-dot {
+  position: absolute;
+  left: 21px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: currentColor;
+  transform: translateY(-50%);
+  z-index: 10;
+}

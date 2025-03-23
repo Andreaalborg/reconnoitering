@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation'; // Import useParams instead
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface ExhibitionData {
   _id: string;
   title: string;
   description: string;
   coverImage: string;
+  images: string[];
   startDate: string;
   endDate: string;
   location: {
@@ -31,10 +34,11 @@ interface ExhibitionData {
   popularity: number;
 }
 
-export default function EditExhibition({ params }: { params: { id: string } }) {
+export default function EditExhibition() {
   const { status } = useSession();
   const router = useRouter();
-  const { id } = params;
+  const params = useParams(); // Use useParams hook instead
+  const id = params.id as string; // Type cast to string
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,7 +86,7 @@ export default function EditExhibition({ params }: { params: { id: string } }) {
       }
     };
     
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && id) {
       fetchExhibition();
     }
   }, [id, status, router]);
@@ -131,6 +135,18 @@ export default function EditExhibition({ params }: { params: { id: string } }) {
     setFormData({
       ...formData,
       [field]: value.split(',').map(item => item.trim()),
+    });
+  };
+  
+  const handleRemoveAdditionalImage = (index: number) => {
+    if (!formData) return;
+    
+    const updatedImages = [...formData.images];
+    updatedImages.splice(index, 1);
+    
+    setFormData({
+      ...formData,
+      images: updatedImages
     });
   };
   
@@ -269,9 +285,54 @@ export default function EditExhibition({ params }: { params: { id: string } }) {
                     placeholder="https://example.com/image.jpg"
                     className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Use images from picsum.photos, unsplash.com, or other configured domains.
-                  </p>
+                  {formData.coverImage && (
+                    <div className="mt-2 h-40 relative">
+                      <Image 
+                        src={formData.coverImage} 
+                        alt="Cover image preview" 
+                        fill
+                        className="object-cover rounded"
+                        sizes="100vw"
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Additional Images */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Additional Images (Optional)
+                  </label>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {formData.images && formData.images.map((img, index) => (
+                      <div key={index} className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                        {img && img.trim() !== '' ? (
+                          <Image 
+                            src={img} 
+                            alt={`Additional image ${index + 1}`} 
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 25vw"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-gray-400 text-sm">Invalid image</span>
+                          </div>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAdditionalImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

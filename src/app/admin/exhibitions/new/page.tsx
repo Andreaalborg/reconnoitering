@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
+import ImageUpload from '@/components/ImageUpload'; // Import the new component
 
 export default function AddExhibition() {
   const { status } = useSession();
@@ -19,6 +21,7 @@ export default function AddExhibition() {
     title: '',
     description: '',
     coverImage: '',
+    images: [] as string[],
     startDate: '',
     endDate: '',
     location: {
@@ -31,9 +34,9 @@ export default function AddExhibition() {
         lng: ''
       }
     },
-    category: [],
-    artists: [],
-    tags: [],
+    category: [] as string[],
+    artists: [] as string[],
+    tags: [] as string[],
     ticketPrice: '',
     ticketUrl: '',
     websiteUrl: '',
@@ -42,6 +45,7 @@ export default function AddExhibition() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -85,10 +89,70 @@ export default function AddExhibition() {
     });
   };
   
+  const handleCoverImageChange = (imageUrl: string) => {
+    setFormData({
+      ...formData,
+      coverImage: imageUrl
+    });
+  };
+  
+  const handleAddImage = (imageUrl: string) => {
+    setAdditionalImages([...additionalImages, imageUrl]);
+    setFormData({
+      ...formData,
+      images: [...additionalImages, imageUrl]
+    });
+  };
+  
+  const handleRemoveAdditionalImage = (index: number) => {
+    const updatedImages = [...additionalImages];
+    updatedImages.splice(index, 1);
+    setAdditionalImages(updatedImages);
+    setFormData({
+      ...formData,
+      images: updatedImages
+    });
+  };
+  
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setFormData({
+            ...formData,
+            location: {
+              ...formData.location,
+              coordinates: {
+                lat: latitude.toString(),
+                lng: longitude.toString()
+              }
+            }
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          alert('Unable to get your location. Please enter coordinates manually.');
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by your browser');
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    // Validate required fields
+    if (!formData.title || !formData.description || !formData.coverImage || 
+        !formData.startDate || !formData.endDate || !formData.location.name || 
+        !formData.location.city || !formData.location.country) {
+      setError('Please fill all required fields');
+      setLoading(false);
+      return;
+    }
     
     try {
       const response = await fetch('/api/exhibitions', {
@@ -96,7 +160,10 @@ export default function AddExhibition() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          images: additionalImages
+        }),
       });
       
       if (!response.ok) {
@@ -196,20 +263,57 @@ export default function AddExhibition() {
                   />
                 </div>
                 
-                <div>
-                  <label htmlFor="coverImage" className="block text-sm font-medium text-gray-700 mb-1">
-                    Cover Image URL *
+                {/* Replace the old cover image input with the new ImageUpload component */}
+                <ImageUpload
+                  initialImage={formData.coverImage}
+                  onImageChange={handleCoverImageChange}
+                  label="Cover Image *"
+                  required={true}
+                />
+                
+                {/* Additional Images */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Additional Images (Optional)
                   </label>
-                  <input
-                    type="url"
-                    id="coverImage"
-                    name="coverImage"
-                    value={formData.coverImage}
-                    onChange={handleChange}
-                    required
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  />
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  {additionalImages.map((img, index) => (
+    <div key={index} className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+      {img && img.trim() !== '' ? (
+        <Image 
+          src={img} 
+          alt={`Additional image ${index + 1}`} 
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 25vw"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <span className="text-gray-400 text-sm">Invalid image</span>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => handleRemoveAdditionalImage(index)}
+        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  ))}
+                    
+                    {/* Add new image button */}
+                    <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <ImageUpload
+                        onImageChange={handleAddImage}
+                        label=""
+                        required={false}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -310,36 +414,47 @@ export default function AddExhibition() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="location.coordinates.lat" className="block text-sm font-medium text-gray-700 mb-1">
-                      Latitude
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Coordinates
                     </label>
-                    <input
-                      type="text"
-                      id="location.coordinates.lat"
-                      name="location.coordinates.lat"
-                      value={formData.location.coordinates.lat}
-                      onChange={handleChange}
-                      placeholder="e.g. 51.5074"
-                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    />
+                    <button
+                      type="button"
+                      onClick={handleGetLocation}
+                      className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
+                    >
+                      Get My Location
+                    </button>
                   </div>
-                  
-                  <div>
-                    <label htmlFor="location.coordinates.lng" className="block text-sm font-medium text-gray-700 mb-1">
-                      Longitude
-                    </label>
-                    <input
-                      type="text"
-                      id="location.coordinates.lng"
-                      name="location.coordinates.lng"
-                      value={formData.location.coordinates.lng}
-                      onChange={handleChange}
-                      placeholder="e.g. -0.1278"
-                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <input
+                        type="text"
+                        id="location.coordinates.lat"
+                        name="location.coordinates.lat"
+                        value={formData.location.coordinates.lat}
+                        onChange={handleChange}
+                        placeholder="Latitude (e.g. 51.5074)"
+                        className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <input
+                        type="text"
+                        id="location.coordinates.lng"
+                        name="location.coordinates.lng"
+                        value={formData.location.coordinates.lng}
+                        onChange={handleChange}
+                        placeholder="Longitude (e.g. -0.1278)"
+                        className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      />
+                    </div>
                   </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    These coordinates are needed for the map view and nearby exhibitions feature
+                  </p>
                 </div>
               </div>
             </div>

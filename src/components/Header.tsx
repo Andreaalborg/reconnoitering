@@ -164,6 +164,15 @@ const Header = () => {
           <Link href="/exhibitions" className="text-gray-700 hover:text-gray-900">
             Exhibitions
           </Link>
+          <Link href="/date-search" className="text-gray-700 hover:text-gray-900">
+            Search by Date
+          </Link>
+          <Link href="/day-planner" className="text-gray-700 hover:text-gray-900">
+            Day Planner
+          </Link>
+          <Link href="/nearby" className="text-gray-700 hover:text-gray-900">
+            Nearby
+          </Link>
           <Link href="/map" className="text-gray-700 hover:text-gray-900">
             Map
           </Link>
@@ -181,9 +190,14 @@ const Header = () => {
                   My Favorites
                 </Link>
                 {session.user?.role === 'admin' && (
-                  <Link href="/admin/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                    Admin Dashboard
-                  </Link>
+                  <>
+                    <Link href="/admin/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                      Admin Dashboard
+                    </Link>
+                    <Link href="/admin/analytics" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                      Analytics
+                    </Link>
+                  </>
                 )}
                 <button 
                   onClick={() => signOut({ callbackUrl: '/' })} 

@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Exhibition from '@/models/Exhibition';
-import { getServerSession } from 'next-auth/next';
 
 // Add to favorites
 export async function POST(
@@ -114,104 +113,99 @@ export async function POST(
   }
 }
 
-// Similar implementation for DELETE with appropriate changes
+// Remove from favorites
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-    export async function DELETE(
-        request: NextRequest,
-        { params }: { params: { id: string } }
-      ) {
-        console.log("Starting favorite removal process");
-        
-        // Bruk en enklere tilnærming med cookies for å hente e-post
-        const cookieStore = cookies();
-        const sessionCookie = cookieStore.get('next-auth.session-token')?.value;
-        
-        if (!sessionCookie) {
-          console.log("No session cookie found");
-          return NextResponse.json(
-            { success: false, error: 'Not authenticated' },
-            { status: 401 }
-          );
-        }
-        
-        try {
-          await dbConnect();
-          const { id } = params;
-          console.log("Processing favorite removal for exhibition ID:", id);
-          
-          // Extract email from session
-          let email = null;
-          try {
-            const base64Payload = sessionCookie.split('.')[1];
-            const payload = Buffer.from(base64Payload, 'base64').toString('utf8');
-            const data = JSON.parse(payload);
-            email = data.email;
-            console.log("Extracted email from session:", email);
-          } catch (e) {
-            console.error("Error extracting email from session:", e);
-          }
-          
-          // Fallback approach
-          if (!email) {
-            const adminUser = await User.findOne({ role: 'admin' });
-            if (adminUser) {
-              email = adminUser.email;
-              console.log("Using admin user as fallback:", email);
-            } else {
-              return NextResponse.json(
-                { success: false, error: 'Could not authenticate user' },
-                { status: 401 }
-              );
-            }
-          }
-          
-          // Find user by email
-          const user = await User.findOne({ email });
-          if (!user) {
-            console.log("User not found with email:", email);
-            return NextResponse.json(
-              { success: false, error: 'User not found' },
-              { status: 404 }
-            );
-          }
-          
-          console.log("User found:", user.name);
-          
-          // Remove from favorites if it exists
-          if (!user.favoriteExhibitions) {
-            user.favoriteExhibitions = [];
-          }
-          
-          const initialLength = user.favoriteExhibitions.length;
-          user.favoriteExhibitions = user.favoriteExhibitions.filter(
-            (favId) => favId.toString() !== id
-          );
-          
-          // Only save if something changed
-          if (user.favoriteExhibitions.length !== initialLength) {
-            await user.save();
-            console.log("Successfully removed from favorites");
-            
-            return NextResponse.json({ 
-              success: true, 
-              data: { message: 'Removed from favorites' } 
-            });
-          } else {
-            console.log("Exhibition was not in favorites");
-            return NextResponse.json({ 
-              success: true, 
-              data: { message: 'Exhibition was not in favorites' } 
-            });
-          }
-        } catch (error: any) {
-          console.error('Error removing favorite:', error);
-          return NextResponse.json(
-            { success: false, error: 'Failed to remove favorite: ' + error.message },
-            { status: 500 }
-          );
-        }
+  console.log("Starting favorite removal process");
+  
+  // Bruk en enklere tilnærming med cookies for å hente e-post
+  const cookieStore = cookies();
+  const sessionCookie = cookieStore.get('next-auth.session-token')?.value;
+  
+  if (!sessionCookie) {
+    console.log("No session cookie found");
+    return NextResponse.json(
+      { success: false, error: 'Not authenticated' },
+      { status: 401 }
+    );
+  }
+  
+  try {
+    await dbConnect();
+    const { id } = params;
+    console.log("Processing favorite removal for exhibition ID:", id);
+    
+    // Extract email from session
+    let email = null;
+    try {
+      const base64Payload = sessionCookie.split('.')[1];
+      const payload = Buffer.from(base64Payload, 'base64').toString('utf8');
+      const data = JSON.parse(payload);
+      email = data.email;
+      console.log("Extracted email from session:", email);
+    } catch (e) {
+      console.error("Error extracting email from session:", e);
+    }
+    
+    // Fallback approach
+    if (!email) {
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        email = adminUser.email;
+        console.log("Using admin user as fallback:", email);
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Could not authenticate user' },
+          { status: 401 }
+        );
       }
     }
+    
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("User not found with email:", email);
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    console.log("User found:", user.name);
+    
+    // Remove from favorites if it exists
+    if (!user.favoriteExhibitions) {
+      user.favoriteExhibitions = [];
+    }
+    
+    const initialLength = user.favoriteExhibitions.length;
+    user.favoriteExhibitions = user.favoriteExhibitions.filter(
+      (favId) => favId.toString() !== id
+    );
+    
+    // Only save if something changed
+    if (user.favoriteExhibitions.length !== initialLength) {
+      await user.save();
+      console.log("Successfully removed from favorites");
+      
+      return NextResponse.json({ 
+        success: true, 
+        data: { message: 'Removed from favorites' } 
+      });
+    } else {
+      console.log("Exhibition was not in favorites");
+      return NextResponse.json({ 
+        success: true, 
+        data: { message: 'Exhibition was not in favorites' } 
+      });
+    }
+  } catch (error: any) {
+    console.error('Error removing favorite:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to remove favorite: ' + error.message },
+      { status: 500 }
+    );
+  }
+}
