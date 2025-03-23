@@ -162,7 +162,7 @@ const Header = () => {
                         onClick={handleSearch}
                         className="block w-full text-left px-4 py-2 text-rose-500 hover:bg-gray-100"
                       >
-                        See all results for "{searchQuery}"
+                        See all results for &quot;{searchQuery}&quot;
                       </button>
                     </li>
                   </ul>

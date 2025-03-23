@@ -38,7 +38,7 @@ export default function ExhibitionDetailPage() {
   const pathname = usePathname();
   const exhibitionId = pathname?.split('/').pop() || '';
   
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   
   const [exhibition, setExhibition] = useState<Exhibition | null>(null);
@@ -185,7 +185,7 @@ export default function ExhibitionDetailPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Exhibition Not Found</h1>
-            <p className="mt-4 text-lg text-gray-600">The exhibition you're looking for doesn't exist or has been removed.</p>
+            <p className="mt-4 text-lg text-gray-600">The exhibition you're looking for doesn&apos;t exist or has been removed.</p>
             <Link href="/exhibitions" className="mt-8 inline-block bg-rose-500 text-white px-6 py-3 rounded-md">
               Browse All Exhibitions
             </Link>

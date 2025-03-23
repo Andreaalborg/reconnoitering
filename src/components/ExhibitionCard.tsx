@@ -39,7 +39,7 @@ const ExhibitionCard = ({
         day: 'numeric' 
       }).format(date);
     } catch (error) {
-      console.error('Error formatting date:', error);
+      console.error('Error formatting date:');
       return 'Date unavailable';
     }
   };

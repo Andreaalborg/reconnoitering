@@ -22,7 +22,8 @@ interface Exhibition {
 }
 
 export default function FavoritesPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
+
   const router = useRouter();
   
   const [favorites, setFavorites] = useState<Exhibition[]>([]);

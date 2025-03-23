@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
-import Link from 'next/link';
+//import Link from 'next/link';
 
 interface Exhibition {
   _id: string;

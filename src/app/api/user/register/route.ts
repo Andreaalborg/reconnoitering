@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import bcrypt from 'bcrypt';
+//import bcrypt from 'bcrypt';
 
 export async function POST(request: Request) {
   try {

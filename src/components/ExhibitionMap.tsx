@@ -141,7 +141,7 @@ export default function ExhibitionMap({ exhibitions }: { exhibitions: Exhibition
       {!mapboxgl.supported() && (
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
           <p className="text-center text-gray-700">
-            Your browser doesn't support Mapbox GL. Please try a different browser.
+          Your browser doesn&apos;t support Mapbox GL. Please try a different browser.
           </p>
         </div>
       )}

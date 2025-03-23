@@ -5,7 +5,7 @@ import User from '@/models/User';
 import Exhibition from '@/models/Exhibition';
 
 // GET user's favorites
-export async function GET(request: NextRequest) {
+export async function GET() {
   console.log("Starting fetch favorites process");
   
   // Get session cookie

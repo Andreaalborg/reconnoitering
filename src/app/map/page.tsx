@@ -69,7 +69,7 @@ export default function MapPage() {
               <div className="text-center">
                 <p className="text-xl text-gray-500 mb-4">Interactive Map Coming Soon</p>
                 <p className="text-gray-600">
-                  We're working on adding a full interactive map.
+                We&apos;re working on adding a full interactive map.
                 </p>
               </div>
             </div>

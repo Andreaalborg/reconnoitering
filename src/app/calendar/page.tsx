@@ -27,7 +27,7 @@ export default function CalendarView() {
   // Today's date if not specified
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
+  //const currentMonth = today.getMonth();
   const currentWeek = getWeekNumber(today);
   
   // Get year and week from URL or use current
