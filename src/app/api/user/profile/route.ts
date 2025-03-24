@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+// Endre denne importlinjen:
+import { authOptions } from '@/app/api/auth/options';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 
