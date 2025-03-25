@@ -11,15 +11,7 @@ const nextConfig = {
       'upload.wikimedia.org'
     ],
   },
-  serverExternalPackages: ['bcrypt'],
-  // Legg til denne konfigurasjonen for å deaktivere statisk pre-rendering
-  experimental: {
-    // Kjører alt på serveren, ingen statisk generering
-    appDir: true,
-    serverActions: true
-  },
-  // Konfigurer output til å bruke "standalone" server
-  output: 'standalone',
+  serverExternalPackages: ['bcrypt']
 };
 
 export default nextConfig;

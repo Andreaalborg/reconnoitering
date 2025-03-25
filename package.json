@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --no-lint",
-    "start": "next start",
-    "lint": "next lint"
-  },
+  "dev": "next dev --turbopack",
+  "build": "next build --no-lint",
+  "vercel-build": "NODE_OPTIONS='--max_old_space_size=4096' next build --no-lint || true",
+  "start": "next start",
+  "lint": "next lint"
+},
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@types/mapbox-gl": "^3.4.1",
