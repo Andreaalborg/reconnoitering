@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -21,9 +21,8 @@ interface Exhibition {
   };
 }
 
-export default function FavoritesPage() {
+function FavoritesContent() {
   const { status } = useSession();
-
   const router = useRouter();
   
   const [favorites, setFavorites] = useState<Exhibition[]>([]);
@@ -158,5 +157,13 @@ export default function FavoritesPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function FavoritesPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <FavoritesContent />
+    </Suspense>
   );
 }

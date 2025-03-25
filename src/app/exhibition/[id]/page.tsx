@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -33,7 +33,7 @@ interface Exhibition {
   websiteUrl?: string;
 }
 
-export default function ExhibitionDetailPage() {
+function ExhibitionDetailContent() {
   // Extract ID from pathname instead of using useParams
   const pathname = usePathname();
   const exhibitionId = pathname?.split('/').pop() || '';
@@ -280,11 +280,91 @@ export default function ExhibitionDetailPage() {
               <h2 className="text-xl font-bold mb-4">About This Exhibition</h2>
               <p className="text-gray-700 mb-6 whitespace-pre-line">{exhibition.description}</p>
               
-              {/* Rest of the content remains the same */}
+              {/* Additional details section - artists, categories, etc. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Artists</h3>
+                  <ul className="list-disc list-inside text-gray-600">
+                    {exhibition.artists.map((artist, index) => (
+                      <li key={index}>{artist}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Categories</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {exhibition.category.map((category, index) => (
+                      <span key={index} className="bg-rose-100 text-rose-800 px-2 py-1 rounded-full text-sm">
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Additional images */}
+              {exhibition.images && exhibition.images.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold mb-3">Gallery</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {exhibition.images.map((image, index) => (
+                      <div key={index} className="relative h-32 rounded-lg overflow-hidden">
+                        <Image 
+                          src={image} 
+                          alt={`${exhibition.title} image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* External links */}
+              {exhibition.websiteUrl && (
+                <div className="mt-6">
+                  <a 
+                    href={exhibition.websiteUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-rose-500 hover:text-rose-700"
+                  >
+                    <span>Visit Exhibition Website</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              )}
+              
+              {/* Tags at the bottom */}
+              {exhibition.tags && exhibition.tags.length > 0 && (
+                <div className="mt-8 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {exhibition.tags.map((tag, index) => (
+                      <span key={index} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ExhibitionDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <ExhibitionDetailContent />
+    </Suspense>
   );
 }

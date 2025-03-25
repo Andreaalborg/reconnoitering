@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Link from 'next/link';
@@ -42,10 +42,16 @@ interface ItineraryItem {
   note?: string;
 }
 
-export default function DayPlannerPage() {
+function DayPlannerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
+  // Today's date if not specified
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  //const currentMonth = today.getMonth();
+  
+  // Get date from URL or use current
   const [date, setDate] = useState<string>(searchParams.get('date') || new Date().toISOString().split('T')[0]);
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -340,7 +346,7 @@ export default function DayPlannerPage() {
         {!showPrintVersion && (
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Plan Your Day</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Plan Your Day</h1>
               <p className="text-lg text-gray-600">
                 {formatDateForDisplay(date)}
               </p>
@@ -460,205 +466,230 @@ export default function DayPlannerPage() {
             <div className="min-w-[768px]">
               {/* Timeline */}
               {itinerary.length > 0 ? (
-                <div className="relative pl-14 py-4">
-                  {/* Timeline vertical line */}
-                  <div className="absolute left-[28px] top-0 bottom-0 w-0.5 bg-gray-300"></div>
-                  
-                  {/* Items */}
-                  {itinerary.map((item, index) => (
-                    <div key={item.id} className="mb-8 relative">
-                      {/* Timeline dot */}
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="itinerary">
+                    {(provided) => (
                       <div 
-                        className={`absolute left-[21px] top-6 w-[14px] h-[14px] rounded-full transform -translate-y-1/2 z-10 ${
-                          item.type === 'exhibition' ? 'bg-blue-500' : 
-                          item.type === 'transport' ? 'bg-gray-400' : 
-                          'bg-green-500'
-                        }`}
-                      ></div>
-                      
-                      {/* Route item */}
-                      <div className={`ml-4 p-4 rounded-lg ${
-                        item.type === 'exhibition' ? 'bg-blue-50 border border-blue-200' :
-                        item.type === 'transport' ? 'bg-gray-50 border border-gray-200' :
-                        'bg-green-50 border border-green-200'
-                      }`}>
-                        {/* Header with time */}
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="font-medium">
-                            {item.startTime} - {item.endTime}
-                          </div>
-                          {!showPrintVersion && (
-                            <div className="flex space-x-2">
-                              {/* Remove button */}
-                              <button
-                                type="button"
-                                onClick={() => removeItem(index)}
-                                className="text-red-400 hover:text-red-600"
+                        className="relative pl-14 py-4"
+                        {...provided.droppableProps} 
+                        ref={provided.innerRef}
+                      >
+                        {/* Timeline vertical line */}
+                        <div className="absolute left-[28px] top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                        
+                        {/* Items */}
+                        {itinerary.map((item, index) => (
+                          <Draggable 
+                            key={item.id} 
+                            draggableId={item.id} 
+                            index={index}
+                            isDragDisabled={showPrintVersion}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="mb-8 relative"
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Content */}
-                        {item.type === 'exhibition' && (
-                          <div>
-                            <div className="flex items-start">
-                              {item.exhibition?.coverImage && (
-                                <div className="flex-shrink-0 mr-4">
-                                  <div className="h-16 w-16 relative rounded overflow-hidden">
-                                    <Image 
-                                      src={item.exhibition.coverImage} 
-                                      alt={item.exhibition.title}
-                                      fill
-                                      className="object-cover"
-                                    />
+                                {/* Timeline dot */}
+                                <div 
+                                  className={`absolute left-[21px] top-6 w-[14px] h-[14px] rounded-full transform -translate-y-1/2 z-10 ${
+                                    item.type === 'exhibition' ? 'bg-blue-500' : 
+                                    item.type === 'transport' ? 'bg-gray-400' : 
+                                    'bg-green-500'
+                                  }`}
+                                ></div>
+                                
+                                {/* Route item */}
+                                <div className={`ml-4 p-4 rounded-lg ${
+                                  item.type === 'exhibition' ? 'bg-blue-50 border border-blue-200' :
+                                  item.type === 'transport' ? 'bg-gray-50 border border-gray-200' :
+                                  'bg-green-50 border border-green-200'
+                                }`}>
+                                  {/* Header with time */}
+                                  <div className="flex justify-between items-center mb-2">
+                                    <div className="font-medium">
+                                      {item.startTime} - {item.endTime}
+                                    </div>
+                                    {!showPrintVersion && (
+                                      <div className="flex space-x-2">
+                                        {/* Remove button */}
+                                        <button
+                                          type="button"
+                                          onClick={() => removeItem(index)}
+                                          className="text-red-400 hover:text-red-600"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
+                                  
+                                  {/* Content */}
+                                  {item.type === 'exhibition' && (
+                                    <div>
+                                      <div className="flex items-start">
+                                        {item.exhibition?.coverImage && (
+                                          <div className="flex-shrink-0 mr-4">
+                                            <div className="h-16 w-16 relative rounded overflow-hidden">
+                                              <Image 
+                                                src={item.exhibition.coverImage} 
+                                                alt={item.exhibition.title}
+                                                fill
+                                                className="object-cover"
+                                              />
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <h3 className="font-semibold text-lg">{item.exhibition?.title}</h3>
+                                          <p className="text-gray-600">{item.exhibition?.location.name}</p>
+                                          <p className="text-sm text-gray-500">
+                                            {item.exhibition?.location.city}, {item.exhibition?.location.country}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      
+                                      {!showPrintVersion && (
+                                        <div className="mt-3 border-t border-blue-100 pt-3">
+                                          <input
+                                            type="text"
+                                            value={item.note || ''}
+                                            onChange={(e) => updateNote(index, e.target.value)}
+                                            placeholder="Add notes about this visit..."
+                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                          />
+                                        </div>
+                                      )}
+                                      
+                                      {showPrintVersion && item.note && (
+                                        <div className="mt-3 border-t border-blue-100 pt-3">
+                                          <p className="text-gray-700">{item.note}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {item.type === 'transport' && (
+                                    <div>
+                                      <div className="flex items-center text-gray-700">
+                                        {/* Icon based on transport mode */}
+                                        <div className="mr-3">
+                                          {item.transportMode === 'walking' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                                            </svg>
+                                          )}
+                                          {item.transportMode === 'public' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                            </svg>
+                                          )}
+                                          {item.transportMode === 'taxi' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                            </svg>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Transport info */}
+                                        <div>
+                                          <div className="font-medium">
+                                            {item.transportMode === 'walking' ? 'Walking' : 
+                                             item.transportMode === 'public' ? 'Public Transport' : 
+                                             'Taxi'}
+                                          </div>
+                                          <div className="text-sm">
+                                            Travel time: {item.transportTime} minutes
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {!showPrintVersion && (
+                                        <div className="mt-3 flex justify-between">
+                                          <div className="flex space-x-2">
+                                            <button
+                                              onClick={() => updateTransportMode(index, 'walking')}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                item.transportMode === 'walking' 
+                                                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                                              }`}
+                                            >
+                                              Walk
+                                            </button>
+                                            <button
+                                              onClick={() => updateTransportMode(index, 'public')}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                item.transportMode === 'public' 
+                                                  ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                                              }`}
+                                            >
+                                              Public
+                                            </button>
+                                            <button
+                                              onClick={() => updateTransportMode(index, 'taxi')}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                item.transportMode === 'taxi' 
+                                                  ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                                              }`}
+                                            >
+                                              Taxi
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {item.type === 'break' && (
+                                    <div>
+                                      <div className="flex items-center">
+                                        <div className="mr-3">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                        </div>
+                                        <div>
+                                          <div className="font-medium">Break</div>
+                                          <div className="text-sm text-gray-600">Duration: 30 minutes</div>
+                                        </div>
+                                      </div>
+                                      
+                                      {!showPrintVersion && (
+                                        <div className="mt-3 border-t border-green-100 pt-3">
+                                          <input
+                                            type="text"
+                                            value={item.note || 'Coffee break'}
+                                            onChange={(e) => updateNote(index, e.target.value)}
+                                            placeholder="What's this break for..."
+                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                          />
+                                        </div>
+                                      )}
+                                      
+                                      {showPrintVersion && item.note && (
+                                        <div className="mt-3 border-t border-green-100 pt-3">
+                                          <p className="text-gray-700">{item.note}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              <div>
-                                <h3 className="font-semibold text-lg">{item.exhibition?.title}</h3>
-                                <p className="text-gray-600">{item.exhibition?.location.name}</p>
-                                <p className="text-sm text-gray-500">
-                                  {item.exhibition?.location.city}, {item.exhibition?.location.country}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {!showPrintVersion && (
-                              <div className="mt-3 border-t border-blue-100 pt-3">
-                                <input
-                                  type="text"
-                                  value={item.note || ''}
-                                  onChange={(e) => updateNote(index, e.target.value)}
-                                  placeholder="Add notes about this visit..."
-                                  className="w-full p-2 border border-gray-300 rounded text-sm"
-                                />
                               </div>
                             )}
-                            
-                            {showPrintVersion && item.note && (
-                              <div className="mt-3 border-t border-blue-100 pt-3">
-                                <p className="text-gray-700">{item.note}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {item.type === 'transport' && (
-                          <div>
-                            <div className="flex items-center text-gray-700">
-                              {/* Icon based on transport mode */}
-                              <div className="mr-3">
-                                {item.transportMode === 'walking' && (
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
-                                  </svg>
-                                )}
-                                {item.transportMode === 'public' && (
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                  </svg>
-                                )}
-                                {item.transportMode === 'taxi' && (
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                  </svg>
-                                )}
-                              </div>
-                              
-                              {/* Transport info */}
-                              <div>
-                                <div className="font-medium">
-                                  {item.transportMode === 'walking' ? 'Walking' : 
-                                   item.transportMode === 'public' ? 'Public Transport' : 
-                                   'Taxi'}
-                                </div>
-                                <div className="text-sm">
-                                  Travel time: {item.transportTime} minutes
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {!showPrintVersion && (
-                              <div className="mt-3 flex justify-between">
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => updateTransportMode(index, 'walking')}
-                                    className={`px-3 py-1 text-sm rounded ${
-                                      item.transportMode === 'walking' 
-                                        ? 'bg-green-100 text-green-800 border border-green-200' 
-                                        : 'bg-gray-100 text-gray-600 border border-gray-200'
-                                    }`}
-                                  >
-                                    Walk
-                                  </button>
-                                  <button
-                                    onClick={() => updateTransportMode(index, 'public')}
-                                    className={`px-3 py-1 text-sm rounded ${
-                                      item.transportMode === 'public' 
-                                        ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                                        : 'bg-gray-100 text-gray-600 border border-gray-200'
-                                    }`}
-                                  >
-                                    Public
-                                  </button>
-                                  <button
-                                    onClick={() => updateTransportMode(index, 'taxi')}
-                                    className={`px-3 py-1 text-sm rounded ${
-                                      item.transportMode === 'taxi' 
-                                        ? 'bg-purple-100 text-purple-800 border border-purple-200' 
-                                        : 'bg-gray-100 text-gray-600 border border-gray-200'
-                                    }`}
-                                  >
-                                    Taxi
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {item.type === 'break' && (
-                          <div>
-                            <div className="flex items-center">
-                              <div className="mr-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </div>
-                              <div>
-                                <div className="font-medium">Break</div>
-                                <div className="text-sm text-gray-600">Duration: 30 minutes</div>
-                              </div>
-                            </div>
-                            
-                            {!showPrintVersion && (
-                              <div className="mt-3 border-t border-green-100 pt-3">
-                                <input
-                                  type="text"
-                                  value={item.note || 'Coffee break'}
-                                  onChange={(e) => updateNote(index, e.target.value)}
-                                  placeholder="What's this break for..."
-                                  className="w-full p-2 border border-gray-300 rounded text-sm"
-                                />
-                              </div>
-                            )}
-                            
-                            {showPrintVersion && item.note && (
-                              <div className="mt-3 border-t border-green-100 pt-3">
-                                <p className="text-gray-700">{item.note}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-gray-500">No exhibitions in your itinerary yet.</p>
@@ -695,6 +726,16 @@ export default function DayPlannerPage() {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+export default function DayPlannerPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+        <DayPlannerContent />
+      </Suspense>
     </div>
   );
 }
