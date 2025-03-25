@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
@@ -29,7 +29,7 @@ interface Exhibition {
   ticketUrl: string;
 }
 
-export default function DateSearchPage() {
+function DateSearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -136,7 +136,7 @@ export default function DateSearchPage() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -299,6 +299,16 @@ export default function DateSearchPage() {
           </div>
         )}
       </main>
+    </>
+  );
+}
+
+export default function DateSearchPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+        <DateSearchContent />
+      </Suspense>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Link from 'next/link';
 
@@ -20,15 +20,18 @@ interface Exhibition {
   ticketUrl?: string;
 }
 
-export default function CalendarView() {
+function CalendarContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   
   // Today's date if not specified
   const today = new Date();
   const currentYear = today.getFullYear();
-  //const currentMonth = today.getMonth();
   const currentWeek = getWeekNumber(today);
+  
+  // Parse search params in client component
+  const searchParams = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
   
   // Get year and week from URL or use current
   const [year, setYear] = useState<number>(
@@ -60,7 +63,11 @@ export default function CalendarView() {
       params.set('city', selectedCity);
     }
     
-    router.push(`/calendar?${params.toString()}`, { scroll: false });
+    // Update URL without full page reload
+    if (typeof window !== 'undefined') {
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({ path: newUrl }, '', newUrl);
+    }
     
     // Fetch exhibitions for this week
     fetchExhibitions(dates[0], dates[6]);
@@ -200,7 +207,7 @@ export default function CalendarView() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -339,6 +346,16 @@ export default function CalendarView() {
           </Link>
         </div>
       </main>
+    </>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+        <CalendarContent />
+      </Suspense>
     </div>
   );
 }

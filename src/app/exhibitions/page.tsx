@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
-//import Link from 'next/link';
 
 interface Exhibition {
   _id: string;
@@ -29,7 +28,7 @@ interface Exhibition {
   tags: string[];
 }
 
-export default function ExhibitionsPage() {
+function ExhibitionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -273,7 +272,7 @@ export default function ExhibitionsPage() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -476,6 +475,16 @@ export default function ExhibitionsPage() {
           </>
         )}
       </main>
+    </>
+  );
+}
+
+export default function ExhibitionsPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+        <ExhibitionsContent />
+      </Suspense>
     </div>
   );
 }
