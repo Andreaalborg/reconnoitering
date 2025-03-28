@@ -1,15 +1,21 @@
+// src/app/admin/exhibitions/new/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import ImageUpload from '@/components/ImageUpload'; // Import the new component
+import ImageUpload from '@/components/ImageUpload';
+import GoogleMap from '@/components/GoogleMap';
 
 export default function AddExhibition() {
   const { status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Check if location was passed from update tracker
+  const locationFromParam = searchParams.get('location');
   
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -25,7 +31,7 @@ export default function AddExhibition() {
     startDate: '',
     endDate: '',
     location: {
-      name: '',
+      name: locationFromParam || '',
       address: '',
       city: '',
       country: '',
@@ -40,13 +46,17 @@ export default function AddExhibition() {
     ticketPrice: '',
     ticketUrl: '',
     websiteUrl: '',
-    popularity: 0
+    popularity: 0,
+    closedDay: '' // New field for weekly closing day
   });
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 48.8566, lng: 2.3522 }); // Default to Paris
+  const [showMap, setShowMap] = useState(false);
   
+  // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
@@ -81,6 +91,7 @@ export default function AddExhibition() {
     }
   };
   
+  // Handle array field changes (comma-separated values)
   const handleArrayChange = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     const { value } = e.target;
     setFormData({
@@ -89,6 +100,7 @@ export default function AddExhibition() {
     });
   };
   
+  // Handle cover image change
   const handleCoverImageChange = (imageUrl: string) => {
     setFormData({
       ...formData,
@@ -96,6 +108,7 @@ export default function AddExhibition() {
     });
   };
   
+  // Handle additional image addition
   const handleAddImage = (imageUrl: string) => {
     setAdditionalImages([...additionalImages, imageUrl]);
     setFormData({
@@ -104,6 +117,7 @@ export default function AddExhibition() {
     });
   };
   
+  // Handle additional image removal
   const handleRemoveAdditionalImage = (index: number) => {
     const updatedImages = [...additionalImages];
     updatedImages.splice(index, 1);
@@ -114,6 +128,109 @@ export default function AddExhibition() {
     });
   };
   
+  // Show the map
+  const handleShowMap = () => {
+    setShowMap(true);
+    
+    // If coordinates are already set, center the map on them
+    if (formData.location.coordinates.lat && formData.location.coordinates.lng) {
+      setMapCenter({
+        lat: parseFloat(formData.location.coordinates.lat as string),
+        lng: parseFloat(formData.location.coordinates.lng as string)
+      });
+    }
+    
+    // If city is set, try to geocode it
+    else if (formData.location.city) {
+      const geocoder = new google.maps.Geocoder();
+      const address = `${formData.location.city}, ${formData.location.country}`;
+      
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results && results[0]) {
+          const location = results[0].geometry.location;
+          const newCenter = {
+            lat: location.lat(),
+            lng: location.lng()
+          };
+          
+          setMapCenter(newCenter);
+          
+          // Update form coordinates
+          setFormData({
+            ...formData,
+            location: {
+              ...formData.location,
+              coordinates: {
+                lat: newCenter.lat.toString(),
+                lng: newCenter.lng.toString()
+              }
+            }
+          });
+        }
+      });
+    }
+  };
+  
+  // Handle map click to set coordinates
+  const handleMapClick = (location: { lat: number; lng: number }) => {
+    setFormData({
+      ...formData,
+      location: {
+        ...formData.location,
+        coordinates: {
+          lat: location.lat.toString(),
+          lng: location.lng.toString()
+        }
+      }
+    });
+  };
+  
+  // Handle place selection from the map search box
+  const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
+    if (!place.geometry || !place.geometry.location) return;
+    
+    const newLocation = {
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng()
+    };
+    
+    // Extract address components
+    let city = '';
+    let country = '';
+    let address = place.formatted_address || '';
+    
+    if (place.address_components) {
+      place.address_components.forEach(component => {
+        const types = component.types;
+        
+        if (types.includes('locality')) {
+          city = component.long_name;
+        } else if (types.includes('country')) {
+          country = component.long_name;
+        }
+      });
+    }
+    
+    // Update form data
+    setFormData({
+      ...formData,
+      location: {
+        ...formData.location,
+        address: address || formData.location.address,
+        city: city || formData.location.city,
+        country: country || formData.location.country,
+        coordinates: {
+          lat: newLocation.lat.toString(),
+          lng: newLocation.lng.toString()
+        }
+      }
+    });
+    
+    // Update map center
+    setMapCenter(newLocation);
+  };
+  
+  // Helper to get current coordinates from browser
   const handleGetLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -129,6 +246,9 @@ export default function AddExhibition() {
               }
             }
           });
+          
+          setMapCenter({ lat: latitude, lng: longitude });
+          setShowMap(true);
         },
         (error) => {
           console.error('Error getting location:', error);
@@ -140,6 +260,7 @@ export default function AddExhibition() {
     }
   };
   
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -263,7 +384,6 @@ export default function AddExhibition() {
                   />
                 </div>
                 
-                {/* Replace the old cover image input with the new ImageUpload component */}
                 <ImageUpload
                   initialImage={formData.coverImage}
                   onImageChange={handleCoverImageChange}
@@ -271,41 +391,39 @@ export default function AddExhibition() {
                   required={true}
                 />
                 
-                {/* Additional Images */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Additional Images (Optional)
                   </label>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-  {additionalImages.map((img, index) => (
-    <div key={index} className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
-      {img && img.trim() !== '' ? (
-        <Image 
-          src={img} 
-          alt={`Additional image ${index + 1}`} 
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 25vw"
-        />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <span className="text-gray-400 text-sm">Invalid image</span>
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => handleRemoveAdditionalImage(index)}
-        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  ))}
+                    {additionalImages.map((img, index) => (
+                      <div key={index} className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                        {img && img.trim() !== '' ? (
+                          <Image 
+                            src={img} 
+                            alt={`Additional image ${index + 1}`} 
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 25vw"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-gray-400 text-sm">Invalid image</span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAdditionalImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
                     
-                    {/* Add new image button */}
                     <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
                       <ImageUpload
                         onImageChange={handleAddImage}
@@ -346,6 +464,28 @@ export default function AddExhibition() {
                       className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                     />
                   </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="closedDay" className="block text-sm font-medium text-gray-700 mb-1">
+                    Weekly Closing Day
+                  </label>
+                  <select
+                    id="closedDay"
+                    name="closedDay"
+                    value={formData.closedDay}
+                    onChange={handleChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  >
+                    <option value="">Open Every Day</option>
+                    <option value="Monday">Closed Mondays</option>
+                    <option value="Tuesday">Closed Tuesdays</option>
+                    <option value="Wednesday">Closed Wednesdays</option>
+                    <option value="Thursday">Closed Thursdays</option>
+                    <option value="Friday">Closed Fridays</option>
+                    <option value="Saturday">Closed Saturdays</option>
+                    <option value="Sunday">Closed Sundays</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -417,43 +557,95 @@ export default function AddExhibition() {
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-sm font-medium text-gray-700">
-                      Coordinates
+                      Location on Map
                     </label>
-                    <button
-                      type="button"
-                      onClick={handleGetLocation}
-                      className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
-                    >
-                      Get My Location
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleGetLocation}
+                        className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
+                      >
+                        Get My Location
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleShowMap}
+                        className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
+                      >
+                        {showMap ? 'Update Map' : 'Show Map'}
+                      </button>
+                    </div>
                   </div>
+                  
+                  {showMap ? (
+                    <div className="h-96 rounded-lg overflow-hidden mb-4">
+                      <GoogleMap
+                        apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+                        center={mapCenter}
+                        zoom={14}
+                        markers={formData.location.coordinates.lat && formData.location.coordinates.lng ? [
+                          {
+                            id: 'venue',
+                            position: {
+                              lat: parseFloat(formData.location.coordinates.lat as string),
+                              lng: parseFloat(formData.location.coordinates.lng as string)
+                            },
+                            title: formData.location.name || 'Selected Location'
+                          }
+                        ] : []}
+                        onClick={handleMapClick}
+                        showSearchBox={true}
+                        onPlaceSelected={handlePlaceSelected}
+                        height="384px"
+                      />
+                    </div>
+                  ) : (
+                    <div 
+                      className="h-48 bg-gray-100 rounded-lg flex items-center justify-center mb-4 cursor-pointer"
+                      onClick={handleShowMap}
+                    >
+                      <div className="text-center text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        <p>Click to show map</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div>
+                      <label htmlFor="location.coordinates.lat" className="block text-sm font-medium text-gray-700 mb-1">
+                        Latitude
+                      </label>
                       <input
                         type="text"
                         id="location.coordinates.lat"
                         name="location.coordinates.lat"
                         value={formData.location.coordinates.lat}
                         onChange={handleChange}
-                        placeholder="Latitude (e.g. 51.5074)"
+                        placeholder="e.g. 51.5074"
                         className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                       />
                     </div>
                     
                     <div>
+                      <label htmlFor="location.coordinates.lng" className="block text-sm font-medium text-gray-700 mb-1">
+                        Longitude
+                      </label>
                       <input
                         type="text"
                         id="location.coordinates.lng"
                         name="location.coordinates.lng"
                         value={formData.location.coordinates.lng}
                         onChange={handleChange}
-                        placeholder="Longitude (e.g. -0.1278)"
+                        placeholder="e.g. -0.1278"
                         className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                       />
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    These coordinates are needed for the map view and nearby exhibitions feature
+                    These coordinates are needed for the map view and nearby exhibitions feature. You can set them using the map above.
                   </p>
                 </div>
               </div>

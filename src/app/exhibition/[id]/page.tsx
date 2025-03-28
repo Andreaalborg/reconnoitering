@@ -1,3 +1,4 @@
+// src/app/exhibition/[id]/page.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -6,6 +7,8 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import Header from '@/components/Header';
+import CalendarExportButtons from '@/components/CalendarExportButtons';
+import GoogleMap from '@/components/GoogleMap';
 
 interface Exhibition {
   _id: string;
@@ -31,6 +34,7 @@ interface Exhibition {
   ticketPrice?: string;
   ticketUrl?: string;
   websiteUrl?: string;
+  closedDay?: string;
 }
 
 function ExhibitionDetailContent() {
@@ -46,6 +50,7 @@ function ExhibitionDetailContent() {
   const [error, setError] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   
   // Fetch exhibition data
   useEffect(() => {
@@ -165,6 +170,17 @@ function ExhibitionDetailContent() {
     }).format(date);
   };
   
+  // Get day of week name
+  const getDayOfWeek = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'long' });
+  };
+  
+  // Handle single day exhibition booking
+  const handleBookOnDate = (date: string) => {
+    router.push(`/date-search?date=${date}&exhibitions=${exhibitionId}`);
+  };
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -198,6 +214,17 @@ function ExhibitionDetailContent() {
   const startDate = formatDate(exhibition.startDate);
   const endDate = formatDate(exhibition.endDate);
   
+  // Check if exhibition has location coordinates for map
+  const hasCoordinates = exhibition.location?.coordinates?.lat && exhibition.location?.coordinates?.lng;
+  
+  // Check if today is during the exhibition period
+  const today = new Date();
+  const isCurrentlyRunning = new Date(exhibition.startDate) <= today && today <= new Date(exhibition.endDate);
+  
+  // Check if today is the weekly closing day
+  const todayDayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const isClosedToday = exhibition.closedDay === todayDayOfWeek;
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -220,6 +247,21 @@ function ExhibitionDetailContent() {
               sizes="100vw"
               priority
             />
+            
+            {/* Status badges for ongoing, closed today */}
+            <div className="absolute top-4 left-4 flex flex-col space-y-2">
+              {isCurrentlyRunning && (
+                <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
+                  Currently Running
+                </span>
+              )}
+              
+              {isCurrentlyRunning && isClosedToday && (
+                <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
+                  Closed Today
+                </span>
+              )}
+            </div>
             
             {/* Favorite button */}
             <button
@@ -252,6 +294,13 @@ function ExhibitionDetailContent() {
                 <p className="text-lg text-gray-600">
                   {exhibition.location.name}, {exhibition.location.city}, {exhibition.location.country}
                 </p>
+                
+                {/* Display closed day if set */}
+                {exhibition.closedDay && (
+                  <p className="mt-2 text-amber-600">
+                    <span className="font-medium">Closed on {exhibition.closedDay}s</span>
+                  </p>
+                )}
               </div>
               
               <div className="mt-4 md:mt-0 bg-gray-100 rounded-lg p-4">
@@ -263,16 +312,30 @@ function ExhibitionDetailContent() {
                     <p className="text-gray-600">{exhibition.ticketPrice}</p>
                   </>
                 )}
-                {exhibition.ticketUrl && (
-                  <a 
-                    href={exhibition.ticketUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="mt-4 block text-center bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded"
-                  >
-                    Buy Tickets
-                  </a>
-                )}
+                
+                <div className="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                  {isCurrentlyRunning && !isClosedToday && (
+                    <button
+                      onClick={() => handleBookOnDate(new Date().toISOString().split('T')[0])}
+                      className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded text-sm"
+                    >
+                      Visit Today
+                    </button>
+                  )}
+                  
+                  {exhibition.ticketUrl && (
+                    <a 
+                      href={exhibition.ticketUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded text-center text-sm"
+                    >
+                      Buy Tickets
+                    </a>
+                  )}
+                  
+                  <CalendarExportButtons exhibition={exhibition} />
+                </div>
               </div>
             </div>
             
@@ -303,6 +366,50 @@ function ExhibitionDetailContent() {
                 </div>
               </div>
               
+              {/* Map section */}
+              {hasCoordinates && (
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Location</h3>
+                    <button 
+                      onClick={() => setShowMap(!showMap)} 
+                      className="text-rose-500 hover:text-rose-700 text-sm font-medium"
+                    >
+                      {showMap ? 'Hide Map' : 'Show Map'}
+                    </button>
+                  </div>
+                  
+                  {showMap && (
+                    <div className="h-80 rounded-lg overflow-hidden mb-4">
+                      <GoogleMap
+                        apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+                        center={{
+                          lat: exhibition.location.coordinates!.lat,
+                          lng: exhibition.location.coordinates!.lng
+                        }}
+                        zoom={15}
+                        markers={[{
+                          id: exhibition._id,
+                          position: {
+                            lat: exhibition.location.coordinates!.lat,
+                            lng: exhibition.location.coordinates!.lng
+                          },
+                          title: exhibition.title,
+                          info: exhibition.location.name
+                        }]}
+                        height="320px"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="font-medium">{exhibition.location.name}</p>
+                    <p className="text-gray-600">{exhibition.location.address}</p>
+                    <p className="text-gray-600">{exhibition.location.city}, {exhibition.location.country}</p>
+                  </div>
+                </div>
+              )}
+              
               {/* Additional images */}
               {exhibition.images && exhibition.images.length > 0 && (
                 <div className="mb-6">
@@ -322,6 +429,55 @@ function ExhibitionDetailContent() {
                   </div>
                 </div>
               )}
+              
+              {/* Plan your visit section */}
+              <div className="mb-6 bg-blue-50 p-6 rounded-lg">
+                <h3 className="text-lg font-bold mb-3">Plan Your Visit</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium text-blue-800 mb-2">Opening Times</h4>
+                    <p className="text-gray-700 mb-2">
+                      This exhibition runs from {startDate} to {endDate}.
+                    </p>
+                    {exhibition.closedDay && (
+                      <p className="text-gray-700 mb-2">
+                        <span className="font-medium">Closed on {exhibition.closedDay}s</span>
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-600">
+                      Please check the official website for specific opening hours and any special closures.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-blue-800 mb-2">Add to Itinerary</h4>
+                    <p className="text-gray-700 mb-3">
+                      Planning a visit? Choose a date to add this exhibition to your day plan:
+                    </p>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="date" 
+                        className="p-2 border border-gray-300 rounded" 
+                        min={exhibition.startDate.split('T')[0]}
+                        max={exhibition.endDate.split('T')[0]}
+                        defaultValue={isCurrentlyRunning ? new Date().toISOString().split('T')[0] : exhibition.startDate.split('T')[0]}
+                        id="visit-date"
+                      />
+                      <button
+                        onClick={() => {
+                          const date = (document.getElementById('visit-date') as HTMLInputElement).value;
+                          handleBookOnDate(date);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                      >
+                        Add to Plan
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               {/* External links */}
               {exhibition.websiteUrl && (

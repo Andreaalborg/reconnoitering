@@ -1,3 +1,4 @@
+// src/app/date-search/page.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -5,7 +6,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface Exhibition {
   _id: string;
@@ -25,20 +25,32 @@ interface Exhibition {
   };
   category: string[];
   artists: string[];
-  ticketPrice: string;
-  ticketUrl: string;
+  ticketPrice?: string;
+  ticketUrl?: string;
+  closedDay?: string; // Added for weekly closing day
 }
 
 function DateSearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Get date from URL or use today
+  // Get dates from URL or use current dates
   const today = new Date();
   const formattedToday = today.toISOString().split('T')[0];
-  const dateParam = searchParams.get('date') || formattedToday;
   
-  const [searchDate, setSearchDate] = useState<string>(dateParam);
+  // Default end date is 7 days from today
+  const defaultEndDate = new Date();
+  defaultEndDate.setDate(today.getDate() + 7);
+  const formattedDefaultEnd = defaultEndDate.toISOString().split('T')[0];
+  
+  // Use URL params or defaults
+  const startDateParam = searchParams.get('startDate') || formattedToday;
+  const endDateParam = searchParams.get('endDate') || formattedDefaultEnd;
+  
+  // State for search parameters
+  const [startDate, setStartDate] = useState<string>(startDateParam);
+  const [endDate, setEndDate] = useState<string>(endDateParam);
+  const [useDateRange, setUseDateRange] = useState<boolean>(searchParams.has('endDate'));
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +64,7 @@ function DateSearchContent() {
   
   useEffect(() => {
     fetchExhibitions();
-  }, [searchDate, selectedCity, selectedCategory]);
+  }, []);
   
   const fetchExhibitions = async () => {
     setLoading(true);
@@ -61,11 +73,20 @@ function DateSearchContent() {
     try {
       // Build URL with search parameters
       const params = new URLSearchParams();
-      params.append('date', searchDate);
+      
+      if (useDateRange) {
+        params.append('startDate', startDate);
+        params.append('endDate', endDate);
+      } else {
+        params.append('date', startDate);
+      }
+      
       if (selectedCity) params.append('city', selectedCity);
       if (selectedCategory) params.append('category', selectedCategory);
       
-      const response = await fetch(`/api/exhibitions/date?${params.toString()}`);
+      // Choose appropriate API endpoint based on whether using date range or single date
+      const endpoint = useDateRange ? '/api/exhibitions' : '/api/exhibitions/date';
+      const response = await fetch(`${endpoint}?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch exhibitions');
@@ -97,7 +118,14 @@ function DateSearchContent() {
     
     // Update URL with search parameters
     const params = new URLSearchParams();
-    if (searchDate) params.set('date', searchDate);
+    
+    if (useDateRange) {
+      params.set('startDate', startDate);
+      params.set('endDate', endDate);
+    } else {
+      params.set('startDate', startDate);
+    }
+    
     if (selectedCity) params.set('city', selectedCity);
     if (selectedCategory) params.set('category', selectedCategory);
     
@@ -121,7 +149,8 @@ function DateSearchContent() {
   
   const startPlanningDay = () => {
     // Create a URL parameter with selected exhibition IDs
-    router.push(`/day-planner?date=${searchDate}&exhibitions=${selectedExhibitions.join(',')}`);
+    const planStartDate = useDateRange ? startDate : startDate;
+    router.push(`/day-planner?date=${planStartDate}&exhibitions=${selectedExhibitions.join(',')}`);
   };
   
   // Format a date for display
@@ -143,52 +172,107 @@ function DateSearchContent() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Find Exhibitions by Date</h1>
           
-          <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <form onSubmit={handleSearchSubmit} className="space-y-6">
+            <div className="flex items-center mb-4">
               <input
-                type="date"
-                id="date"
-                value={searchDate}
-                onChange={(e) => setSearchDate(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                type="checkbox"
+                id="useDateRange"
+                checked={useDateRange}
+                onChange={(e) => setUseDateRange(e.target.checked)}
+                className="mr-2 h-4 w-4 text-rose-500"
               />
+              <label htmlFor="useDateRange" className="text-gray-700">
+                Search by date range
+              </label>
             </div>
             
-            <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <select
-                id="city"
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="">All Cities</option>
-                {cities.map((city, index) => (
-                  <option key={index} value={city}>{city}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {useDateRange ? (
+                <>
+                  <div>
+                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      id="startDate"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      id="endDate"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate}
+                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    id="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    required
+                  />
+                </div>
+              )}
+              
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                  City
+                </label>
+                <select
+                  id="city"
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                >
+                  <option value="">All Cities</option>
+                  {cities.map((city, index) => (
+                    <option key={index} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((category, index) => (
+                    <option key={index} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                id="category"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="">All Categories</option>
-                {categories.map((category, index) => (
-                  <option key={index} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="flex items-end">
+            <div className="flex justify-end">
               <button 
                 type="submit"
-                className="bg-rose-500 hover:bg-rose-600 text-white font-medium py-2 px-4 rounded transition-colors w-full"
+                className="bg-rose-500 hover:bg-rose-600 text-white font-medium py-2 px-6 rounded transition-colors"
               >
                 Search
               </button>
@@ -196,10 +280,12 @@ function DateSearchContent() {
           </form>
         </div>
         
-        {searchDate && (
+        {(startDate || endDate) && (
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-800">
-              Exhibitions on {formatDateForDisplay(searchDate)}
+              {useDateRange 
+                ? `Exhibitions from ${formatDateForDisplay(startDate)} to ${formatDateForDisplay(endDate)}`
+                : `Exhibitions on ${formatDateForDisplay(startDate)}`}
               {selectedCity && ` in ${selectedCity}`}
               {selectedCategory && `, ${selectedCategory} category`}
             </h2>
@@ -259,7 +345,7 @@ function DateSearchContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {exhibitions.map((exhibition) => (
               <div key={exhibition._id} className="relative">
-                {/* Tydeligere select-knapp plassert utenfor ExhibitionCard */}
+                {/* Selection button */}
                 <div className="absolute top-3 right-3 z-20">
                   <button
                     type="button"
@@ -294,6 +380,13 @@ function DateSearchContent() {
                   startDate={exhibition.startDate}
                   endDate={exhibition.endDate}
                 />
+                
+                {/* Closed day badge if provided */}
+                {exhibition.closedDay && (
+                  <div className="absolute bottom-3 left-3 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                    Closed on {exhibition.closedDay}s
+                  </div>
+                )}
               </div>
             ))}
           </div>

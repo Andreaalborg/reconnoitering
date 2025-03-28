@@ -1,3 +1,4 @@
+// src/app/day-planner/page.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -6,6 +7,9 @@ import Header from '@/components/Header';
 import Link from 'next/link';
 import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import GoogleMap from '@/components/GoogleMap';
+import { calculateTravelTime } from '@/services/routesService';
+import { exportItineraryToCalendar } from '@/services/calendarExport';
 
 interface Exhibition {
   _id: string;
@@ -29,6 +33,7 @@ interface Exhibition {
   ticketPrice?: string;
   ticketUrl?: string;
   websiteUrl?: string;
+  closedDay?: string;
 }
 
 interface ItineraryItem {
@@ -37,8 +42,10 @@ interface ItineraryItem {
   exhibition?: Exhibition;
   startTime: string;
   endTime: string;
-  transportMode?: 'walking' | 'public' | 'taxi';
+  transportMode?: 'WALK' | 'DRIVE' | 'TRANSIT' | 'BICYCLE';
   transportTime?: number; // in minutes
+  transportDistance?: number; // in meters
+  transportPolyline?: string; // encoded polyline for the route
   note?: string;
 }
 
@@ -48,8 +55,6 @@ function DayPlannerContent() {
   
   // Today's date if not specified
   const today = new Date();
-  const currentYear = today.getFullYear();
-  //const currentMonth = today.getMonth();
   
   // Get date from URL or use current
   const [date, setDate] = useState<string>(searchParams.get('date') || new Date().toISOString().split('T')[0]);
@@ -62,6 +67,8 @@ function DayPlannerContent() {
   const [visitDuration, setVisitDuration] = useState<number>(60); // minutes
   const [transportTime, setTransportTime] = useState<number>(30); // minutes
   const [showPrintVersion, setShowPrintVersion] = useState<boolean>(false);
+  const [showMap, setShowMap] = useState<boolean>(false);
+  const [routeCalculating, setRouteCalculating] = useState<boolean>(false);
   
   useEffect(() => {
     const exhibitionIds = searchParams.get('exhibitions');
@@ -140,7 +147,7 @@ function DayPlannerContent() {
           type: 'transport',
           startTime: transportStartTime,
           endTime: transportEndTime,
-          transportMode: 'public',
+          transportMode: 'TRANSIT',
           transportTime: transportTime
         });
       }
@@ -160,7 +167,7 @@ function DayPlannerContent() {
     return hours * 60 + minutes;
   };
   
-  const updateItineraryTimes = () => {
+  const updateItineraryTimes = async () => {
     if (itinerary.length === 0) return;
     
     // Start with the first item at start time
@@ -170,14 +177,15 @@ function DayPlannerContent() {
     const updatedItinerary = [...itinerary];
     
     // Update times for each item
-    updatedItinerary.forEach((item, index) => {
+    for (let i = 0; i < updatedItinerary.length; i++) {
+      const item = updatedItinerary[i];
       item.startTime = minutesToTimeString(currentTimeInMinutes);
       
       if (item.type === 'exhibition') {
         // Exhibition duration
         currentTimeInMinutes += visitDuration;
       } else if (item.type === 'transport') {
-        // Transport duration
+        // Transport duration - either use previously calculated time or default
         currentTimeInMinutes += item.transportTime || transportTime;
       } else if (item.type === 'break') {
         // Break duration (30 minutes by default)
@@ -185,9 +193,79 @@ function DayPlannerContent() {
       }
       
       item.endTime = minutesToTimeString(currentTimeInMinutes);
-    });
+    }
     
     setItinerary(updatedItinerary);
+  };
+  
+  // Calculate routes between all locations using Google Routes API
+  const calculateRoutes = async () => {
+    if (itinerary.length < 3) return; // Need at least 2 exhibitions with 1 transport
+    
+    setRouteCalculating(true);
+    
+    try {
+      const updatedItinerary = [...itinerary];
+      
+      // Process each transport item
+      for (let i = 0; i < updatedItinerary.length; i++) {
+        const item = updatedItinerary[i];
+        
+        if (item.type === 'transport') {
+          const prevItem = updatedItinerary[i-1];
+          const nextItem = updatedItinerary[i+1];
+          
+          // Ensure the previous and next items are exhibitions with coordinates
+          if (prevItem?.type === 'exhibition' && nextItem?.type === 'exhibition' &&
+              prevItem.exhibition?.location.coordinates && nextItem.exhibition?.location.coordinates) {
+            
+            const origin = prevItem.exhibition.location.coordinates;
+            const destination = nextItem.exhibition.location.coordinates;
+            
+            // Calculate travel time using Google Routes API
+            const travelMinutes = await calculateTravelTime(
+              { lat: origin.lat, lng: origin.lng },
+              { lat: destination.lat, lng: destination.lng },
+              item.transportMode
+            );
+            
+            // Update transport item
+            item.transportTime = travelMinutes;
+            
+            // Update end time
+            const startTimeMinutes = timeStringToMinutes(item.startTime);
+            const endTimeMinutes = startTimeMinutes + travelMinutes;
+            item.endTime = minutesToTimeString(endTimeMinutes);
+            
+            // Update times for subsequent items
+            let currentTimeInMinutes = endTimeMinutes;
+            
+            for (let j = i + 1; j < updatedItinerary.length; j++) {
+              const nextItem = updatedItinerary[j];
+              nextItem.startTime = minutesToTimeString(currentTimeInMinutes);
+              
+              if (nextItem.type === 'exhibition') {
+                currentTimeInMinutes += visitDuration;
+              } else if (nextItem.type === 'transport') {
+                currentTimeInMinutes += nextItem.transportTime || transportTime;
+              } else if (nextItem.type === 'break') {
+                currentTimeInMinutes += 30;
+              }
+              
+              nextItem.endTime = minutesToTimeString(currentTimeInMinutes);
+            }
+          }
+        }
+      }
+      
+      setItinerary(updatedItinerary);
+      
+    } catch (error) {
+      console.error('Error calculating routes:', error);
+      alert('Some routes could not be calculated accurately. Default travel times are used instead.');
+    } finally {
+      setRouteCalculating(false);
+    }
   };
   
   const handleDragEnd = (result: any) => {
@@ -250,18 +328,20 @@ function DayPlannerContent() {
     setItinerary(newItinerary);
   };
   
-  const updateTransportMode = (index: number, mode: 'walking' | 'public' | 'taxi') => {
+  const updateTransportMode = (index: number, mode: 'WALK' | 'DRIVE' | 'TRANSIT' | 'BICYCLE') => {
     const newItinerary = [...itinerary];
     if (newItinerary[index].type === 'transport') {
       newItinerary[index].transportMode = mode;
       
-      // Update transport time based on mode
-      if (mode === 'walking') {
+      // Update transport time based on mode (these are just estimates before calculating)
+      if (mode === 'WALK') {
         newItinerary[index].transportTime = 45; // 45 minutes for walking
-      } else if (mode === 'public') {
+      } else if (mode === 'TRANSIT') {
         newItinerary[index].transportTime = 30; // 30 minutes for public transport
+      } else if (mode === 'DRIVE') {
+        newItinerary[index].transportTime = 20; // 20 minutes for driving
       } else {
-        newItinerary[index].transportTime = 20; // 20 minutes for taxi
+        newItinerary[index].transportTime = 35; // 35 minutes for bicycling
       }
       
       setItinerary(newItinerary);
@@ -304,9 +384,58 @@ function DayPlannerContent() {
     return `${hours}h ${minutes}m`;
   };
   
+  // Export to calendar
+  const handleExportToCalendar = () => {
+    try {
+      const dateObj = new Date(date);
+      exportItineraryToCalendar(dateObj, itinerary);
+    } catch (error) {
+      console.error('Error exporting to calendar:', error);
+      alert('Failed to create calendar file. Please try again.');
+    }
+  };
+  
   // Print-friendly version
   const togglePrintVersion = () => {
     setShowPrintVersion(!showPrintVersion);
+  };
+  
+  // Prepare map data
+  const prepareMapData = () => {
+    // Extract exhibition locations with coordinates
+    const locationMarkers = itinerary
+      .filter(item => item.type === 'exhibition' && item.exhibition?.location.coordinates)
+      .map((item, index) => {
+        const exhibition = item.exhibition!;
+        return {
+          id: exhibition._id,
+          position: {
+            lat: exhibition.location.coordinates!.lat,
+            lng: exhibition.location.coordinates!.lng
+          },
+          title: exhibition.title,
+          info: `${index + 1}. ${exhibition.title} (${item.startTime}-${item.endTime})`
+        };
+      });
+    
+    // Calculate the center of all locations
+    if (locationMarkers.length > 0) {
+      const sumLat = locationMarkers.reduce((sum, marker) => sum + marker.position.lat, 0);
+      const sumLng = locationMarkers.reduce((sum, marker) => sum + marker.position.lng, 0);
+      
+      return {
+        markers: locationMarkers,
+        center: {
+          lat: sumLat / locationMarkers.length,
+          lng: sumLng / locationMarkers.length
+        }
+      };
+    }
+    
+    return {
+      markers: [],
+      center: { lat: 48.8566, lng: 2.3522 } // Default to Paris
+    };
   };
   
   if (loading) {
@@ -338,6 +467,8 @@ function DayPlannerContent() {
     );
   }
   
+  const mapData = prepareMapData();
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {!showPrintVersion && <Header />}
@@ -354,11 +485,35 @@ function DayPlannerContent() {
             
             <div className="flex space-x-4 mt-4 md:mt-0">
               <button 
+                onClick={handleExportToCalendar}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+              >
+                <span className="flex items-center">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 mr-2" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                    />
+                  </svg>
+                  Export to Calendar
+                </span>
+              </button>
+              
+              <button 
                 onClick={togglePrintVersion}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
               >
                 Print / Share
               </button>
+              
               <Link
                 href={`/date-search?date=${date}`}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition-colors"
@@ -449,15 +604,49 @@ function DayPlannerContent() {
                 />
               </div>
               
-              <div className="flex items-end">
+              <div className="flex items-end space-x-2">
                 <button
                   onClick={addBreak}
-                  className="bg-blue-100 text-blue-700 border border-blue-300 px-4 py-2 rounded hover:bg-blue-200 transition-colors w-full"
+                  className="bg-blue-100 text-blue-700 border border-blue-300 px-4 py-2 rounded hover:bg-blue-200 transition-colors"
                 >
                   Add Break
                 </button>
+                
+                <button
+                  onClick={calculateRoutes}
+                  disabled={routeCalculating}
+                  className="bg-purple-100 text-purple-700 border border-purple-300 px-4 py-2 rounded hover:bg-purple-200 transition-colors disabled:opacity-50"
+                >
+                  {routeCalculating ? 'Calculating...' : 'Calculate Routes'}
+                </button>
               </div>
             </div>
+          </div>
+        )}
+        
+        {!showPrintVersion && mapData.markers.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Route Map</h2>
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className="text-blue-500 hover:text-blue-700"
+              >
+                {showMap ? 'Hide Map' : 'Show Map'}
+              </button>
+            </div>
+            
+            {showMap && (
+              <div className="h-96 rounded-lg overflow-hidden">
+                <GoogleMap
+                  apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+                  center={mapData.center}
+                  zoom={12}
+                  markers={mapData.markers}
+                  height="384px"
+                />
+              </div>
+            )}
           </div>
         )}
         
@@ -548,8 +737,13 @@ function DayPlannerContent() {
                                           <h3 className="font-semibold text-lg">{item.exhibition?.title}</h3>
                                           <p className="text-gray-600">{item.exhibition?.location.name}</p>
                                           <p className="text-sm text-gray-500">
-                                            {item.exhibition?.location.city}, {item.exhibition?.location.country}
+                                            {item.exhibition?.location.address}, {item.exhibition?.location.city}
                                           </p>
+                                          {item.exhibition?.closedDay && (
+                                            <p className="text-amber-600 text-sm mt-1">
+                                              Closed on {item.exhibition.closedDay}s
+                                            </p>
+                                          )}
                                         </div>
                                       </div>
                                       
@@ -578,19 +772,24 @@ function DayPlannerContent() {
                                       <div className="flex items-center text-gray-700">
                                         {/* Icon based on transport mode */}
                                         <div className="mr-3">
-                                          {item.transportMode === 'walking' && (
+                                          {item.transportMode === 'WALK' && (
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                                              <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
                                             </svg>
                                           )}
-                                          {item.transportMode === 'public' && (
+                                          {item.transportMode === 'TRANSIT' && (
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                              <path d="M12 2c-4.42 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-6H6V6h5v5zm5.5 6c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6h-5V6h5v5z" />
                                             </svg>
                                           )}
-                                          {item.transportMode === 'taxi' && (
+                                          {item.transportMode === 'DRIVE' && (
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+                                            </svg>
+                                          )}
+                                          {item.transportMode === 'BICYCLE' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z" />
                                             </svg>
                                           )}
                                         </div>
@@ -598,9 +797,10 @@ function DayPlannerContent() {
                                         {/* Transport info */}
                                         <div>
                                           <div className="font-medium">
-                                            {item.transportMode === 'walking' ? 'Walking' : 
-                                             item.transportMode === 'public' ? 'Public Transport' : 
-                                             'Taxi'}
+                                            {item.transportMode === 'WALK' ? 'Walking' : 
+                                             item.transportMode === 'TRANSIT' ? 'Public Transport' : 
+                                             item.transportMode === 'DRIVE' ? 'Driving' :
+                                             'Cycling'}
                                           </div>
                                           <div className="text-sm">
                                             Travel time: {item.transportTime} minutes
@@ -612,9 +812,9 @@ function DayPlannerContent() {
                                         <div className="mt-3 flex justify-between">
                                           <div className="flex space-x-2">
                                             <button
-                                              onClick={() => updateTransportMode(index, 'walking')}
+                                              onClick={() => updateTransportMode(index, 'WALK')}
                                               className={`px-3 py-1 text-sm rounded ${
-                                                item.transportMode === 'walking' 
+                                                item.transportMode === 'WALK' 
                                                   ? 'bg-green-100 text-green-800 border border-green-200' 
                                                   : 'bg-gray-100 text-gray-600 border border-gray-200'
                                               }`}
@@ -622,9 +822,9 @@ function DayPlannerContent() {
                                               Walk
                                             </button>
                                             <button
-                                              onClick={() => updateTransportMode(index, 'public')}
+                                              onClick={() => updateTransportMode(index, 'TRANSIT')}
                                               className={`px-3 py-1 text-sm rounded ${
-                                                item.transportMode === 'public' 
+                                                item.transportMode === 'TRANSIT' 
                                                   ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                                   : 'bg-gray-100 text-gray-600 border border-gray-200'
                                               }`}
@@ -632,14 +832,24 @@ function DayPlannerContent() {
                                               Public
                                             </button>
                                             <button
-                                              onClick={() => updateTransportMode(index, 'taxi')}
+                                              onClick={() => updateTransportMode(index, 'DRIVE')}
                                               className={`px-3 py-1 text-sm rounded ${
-                                                item.transportMode === 'taxi' 
+                                                item.transportMode === 'DRIVE' 
                                                   ? 'bg-purple-100 text-purple-800 border border-purple-200' 
                                                   : 'bg-gray-100 text-gray-600 border border-gray-200'
                                               }`}
                                             >
-                                              Taxi
+                                              Drive
+                                            </button>
+                                            <button
+                                              onClick={() => updateTransportMode(index, 'BICYCLE')}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                item.transportMode === 'BICYCLE' 
+                                                  ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
+                                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                                              }`}
+                                            >
+                                              Cycle
                                             </button>
                                           </div>
                                         </div>
@@ -732,10 +942,8 @@ function DayPlannerContent() {
 
 export default function DayPlannerPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
-        <DayPlannerContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+      <DayPlannerContent />
+    </Suspense>
   );
 }
