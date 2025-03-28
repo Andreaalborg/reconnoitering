@@ -60,8 +60,8 @@ interface Coordinates {
       }
       
       // Build the request URL
-      const url = new URL('https://routes.googleapis.com/directions/v2:computeRoutes');
-      url.searchParams.set('key', apiKey);
+      const url = `https://routes.googleapis.com/directions/v2:computeRoutes?key=${apiKey}`;
+
       
       // Build the request body
       const requestBody = {

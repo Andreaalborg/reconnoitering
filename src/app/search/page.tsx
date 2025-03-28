@@ -35,12 +35,13 @@ function SearchContent() {
   const [searchTerm, setSearchTerm] = useState(searchQuery);
   
   useEffect(() => {
+    if (typeof window === 'undefined') return; // ❗Hopp over på server
     if (searchQuery) {
       fetchSearchResults(searchQuery);
     } else {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery]);  
   
   const fetchSearchResults = async (query: string) => {
     setLoading(true);

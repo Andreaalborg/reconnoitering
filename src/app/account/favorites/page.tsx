@@ -1,4 +1,6 @@
 'use client';
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
@@ -24,38 +26,30 @@ interface Exhibition {
 function FavoritesContent() {
   const { status } = useSession();
   const router = useRouter();
-  
+
   const [favorites, setFavorites] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/login?callbackUrl=/account/favorites');
       return;
     }
-    
+
     const fetchFavorites = async () => {
       if (status !== 'authenticated') return;
-      
+
       try {
-        console.log("Fetching favorites...");
         const response = await fetch('/api/user/favorites', {
-          credentials: 'include' // Ensure cookies are sent
+          credentials: 'include'
         });
-        
-        console.log("Favorites API response status:", response.status);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch favorites: ${response.status}`);
         }
-        
-        const responseText = await response.text();
-        console.log("Raw API response:", responseText);
-        
-        const data = JSON.parse(responseText);
-        console.log("Parsed favorites data:", data);
-        
+
+        const data = await response.json();
         setFavorites(data.data || []);
       } catch (err) {
         console.error('Error fetching favorites:', err);
@@ -64,24 +58,23 @@ function FavoritesContent() {
         setLoading(false);
       }
     };
-    
+
     if (status === 'authenticated') {
       fetchFavorites();
     }
   }, [status, router]);
-  
+
   const handleRemoveFavorite = async (id: string) => {
     try {
       const response = await fetch(`/api/user/favorites/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to remove from favorites');
       }
-      
-      // Update UI without reloading
+
       setFavorites(favorites.filter(fav => fav._id !== id));
       alert('Removed from favorites!');
     } catch (err) {
@@ -89,7 +82,7 @@ function FavoritesContent() {
       alert('Failed to remove from favorites. Please try again.');
     }
   };
-  
+
   if (status === 'loading' || (status === 'authenticated' && loading)) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -102,27 +95,27 @@ function FavoritesContent() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">My Favorite Exhibitions</h1>
-        
+
         {error && (
           <div className="mb-6 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
           </div>
         )}
-        
+
         {favorites.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-4">No favorites yet</h2>
             <p className="text-gray-600 mb-6">
               Start exploring exhibitions and save your favorites to see them here.
             </p>
-            
+
             <Link
               href="/exhibitions"
               className="inline-block bg-rose-500 text-white px-4 py-2 rounded hover:bg-rose-600 transition-colors"
