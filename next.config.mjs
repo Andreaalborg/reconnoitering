@@ -1,3 +1,5 @@
+// next.config.mjs - Final version
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -15,12 +17,12 @@ const nextConfig = {
   serverExternalPackages: ['bcrypt'],
   // Disable static exports that could cause problems
   output: 'standalone',
-  // Disable the React Server Components strict mode which helps with Suspense
+  // Configuration for app directory
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
-    },
-  },
+    }
+  }
 };
 
 export default nextConfig;

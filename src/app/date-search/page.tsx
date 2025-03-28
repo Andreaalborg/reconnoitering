@@ -1,6 +1,6 @@
-// src/app/date-search/page.tsx
+// src/app/date-search/page.tsx - Fixed version
 'use client';
-
+export const dynamic = 'force-dynamic';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
@@ -43,67 +43,99 @@ function DateSearchContent() {
   defaultEndDate.setDate(today.getDate() + 7);
   const formattedDefaultEnd = defaultEndDate.toISOString().split('T')[0];
   
-  // Use URL params or defaults
-  const startDateParam = searchParams.get('startDate') || formattedToday;
-  const endDateParam = searchParams.get('endDate') || formattedDefaultEnd;
-  
-  // State for search parameters
-  const [startDate, setStartDate] = useState<string>(startDateParam);
-  const [endDate, setEndDate] = useState<string>(endDateParam);
-  const [useDateRange, setUseDateRange] = useState<boolean>(searchParams.has('endDate'));
+  // Initialize states with defaults - we'll update from URL params in useEffect
+  const [startDate, setStartDate] = useState<string>(formattedToday);
+  const [endDate, setEndDate] = useState<string>(formattedDefaultEnd);
+  const [useDateRange, setUseDateRange] = useState<boolean>(false);
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [cities, setCities] = useState<string[]>([]);
-  const [selectedCity, setSelectedCity] = useState<string>(searchParams.get('city') || '');
+  const [selectedCity, setSelectedCity] = useState<string>('');
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   // For day planning
   const [selectedExhibitions, setSelectedExhibitions] = useState<string[]>([]);
-  
+
+  // Safely get URL parameters after component mounts
   useEffect(() => {
+    if (searchParams) {
+      // Use URL params or defaults
+      const startDateParam = searchParams.get('startDate');
+      if (startDateParam) setStartDate(startDateParam);
+      
+      const endDateParam = searchParams.get('endDate');
+      if (endDateParam) {
+        setEndDate(endDateParam);
+        setUseDateRange(true);
+      }
+      
+      const cityParam = searchParams.get('city');
+      if (cityParam) setSelectedCity(cityParam);
+      
+      const categoryParam = searchParams.get('category');
+      if (categoryParam) setSelectedCategory(categoryParam);
+    }
+    
     fetchExhibitions();
-  }, []);
+  }, [searchParams]);
   
   const fetchExhibitions = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // Build URL with search parameters
+      // Safely build search parameters
       const params = new URLSearchParams();
       
-      if (useDateRange) {
-        params.append('startDate', startDate);
-        params.append('endDate', endDate);
-      } else {
-        params.append('date', startDate);
-      }
-      
-      if (selectedCity) params.append('city', selectedCity);
-      if (selectedCategory) params.append('category', selectedCategory);
-      
-      // Choose appropriate API endpoint based on whether using date range or single date
-      const endpoint = useDateRange ? '/api/exhibitions' : '/api/exhibitions/date';
-      const response = await fetch(`${endpoint}?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch exhibitions');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setExhibitions(data.data);
-        
-        // Extract unique cities and categories for filters
-        if (data.meta && data.meta.filter_options) {
-          setCities(data.meta.filter_options.cities || []);
-          setCategories(data.meta.filter_options.categories || []);
+      // Only access search params after being sure we're on the client
+      if (typeof window !== 'undefined') {
+        if (searchParams) {
+          // Use date parameters from URL if available
+          const urlStartDate = searchParams.get('startDate');
+          const urlEndDate = searchParams.get('endDate');
+          const urlCity = searchParams.get('city');
+          const urlCategory = searchParams.get('category');
+          
+          if (urlStartDate) params.append(urlEndDate ? 'startDate' : 'date', urlStartDate);
+          if (urlEndDate) params.append('endDate', urlEndDate);
+          if (urlCity) params.append('city', urlCity);
+          if (urlCategory) params.append('category', urlCategory);
+        } else {
+          // Use state values as fallback
+          if (useDateRange) {
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+          } else {
+            params.append('date', startDate);
+          }
+          
+          if (selectedCity) params.append('city', selectedCity);
+          if (selectedCategory) params.append('category', selectedCategory);
         }
-      } else {
-        throw new Error(data.error || 'Failed to fetch exhibitions');
+      
+        // Choose appropriate API endpoint based on whether using date range or single date
+        const endpoint = params.has('endDate') ? '/api/exhibitions' : '/api/exhibitions/date';
+        const response = await fetch(`${endpoint}?${params.toString()}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch exhibitions');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setExhibitions(data.data);
+          
+          // Extract unique cities and categories for filters
+          if (data.meta && data.meta.filter_options) {
+            setCities(data.meta.filter_options.cities || []);
+            setCategories(data.meta.filter_options.categories || []);
+          }
+        } else {
+          throw new Error(data.error || 'Failed to fetch exhibitions');
+        }
       }
     } catch (err: any) {
       console.error('Error fetching exhibitions:', err);

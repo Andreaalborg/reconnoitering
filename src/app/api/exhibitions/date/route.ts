@@ -1,3 +1,5 @@
+// src/app/api/exhibitions/date/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
@@ -31,6 +33,7 @@ export async function GET(request: NextRequest) {
     // Optional filters
     const city = searchParams.get('city');
     const category = searchParams.get('category');
+    const closedDay = searchParams.get('closedDay');
     
     // Build the query
     const query: any = {
@@ -41,16 +44,35 @@ export async function GET(request: NextRequest) {
     };
     
     // Add optional filters
-    if (city) {
-      query['location.city'] = { $regex: new RegExp(city, 'i') };
+    if (city) query['location.city'] = { $regex: new RegExp(city, 'i') };
+    if (category) query.category = { $regex: new RegExp(category, 'i') };
+    
+    // Handle closedDay filter
+    if (closedDay) {
+      if (closedDay === 'none') {
+        // Find exhibitions that are open every day (no closed day)
+        query.closedDay = null;
+      } else {
+        // Find exhibitions that are closed on the specified day
+        query.closedDay = closedDay;
+      }
     }
     
-    if (category) {
-      query.category = { $regex: new RegExp(category, 'i') };
-    }
+    // Check if the day of the week for the search date matches any exhibition's closed day
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeek = daysOfWeek[searchDate.getDay()];
     
     // Execute the query
     const exhibitions = await Exhibition.find(query).lean();
+    
+    // Add a flag for each exhibition to indicate if it's closed on the search date
+    const exhibitionsWithStatus = exhibitions.map(ex => {
+      const isClosedOnSearchDate = ex.closedDay === dayOfWeek;
+      return {
+        ...ex,
+        isClosedOnSearchDate
+      };
+    });
     
     // Get unique cities and categories for filters
     const uniqueCities = await Exhibition.distinct('location.city');
@@ -61,9 +83,10 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      data: exhibitions,
+      data: exhibitionsWithStatus,
       meta: {
         date: dateParam,
+        dayOfWeek: dayOfWeek,
         total: exhibitions.length,
         filter_options: {
           cities: uniqueCities,

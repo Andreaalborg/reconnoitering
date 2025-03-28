@@ -94,7 +94,7 @@ function PreferencesContent() {
         const sampleArtists = [
           'Pablo Picasso', 'Claude Monet', 'Vincent van Gogh', 'Salvador Dalí',
           'Frida Kahlo', 'Leonardo da Vinci', 'Rembrandt', 'Michelangelo',
-          'Andy Warhol', 'Georgia O'Keeffe', 'Jackson Pollock', 'Edvard Munch'
+          'Andy Warhol', 'Georgia O\'Keeffe', 'Jackson Pollock', 'Edvard Munch'
         ];
         setAvailableArtists(sampleArtists);
       }
