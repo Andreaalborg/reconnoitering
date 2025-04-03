@@ -1,5 +1,6 @@
 'use client';
-
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
@@ -35,8 +36,8 @@ function SearchContent() {
   const [searchTerm, setSearchTerm] = useState(searchQuery);
   
   useEffect(() => {
-    if (typeof window === 'undefined') return; // ❗Hopp over på server
-    if (searchQuery) {
+    // This ensures the code only runs in the browser
+    if (searchQuery && typeof window !== 'undefined') {
       fetchSearchResults(searchQuery);
     } else {
       setLoading(false);
@@ -48,6 +49,9 @@ function SearchContent() {
     setError(null);
     
     try {
+      // Use URL constructor only in browser context
+      if (typeof window === 'undefined') return;
+      
       const response = await fetch(`/api/exhibitions?search=${encodeURIComponent(query)}`);
       
       if (!response.ok) {

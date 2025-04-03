@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -34,6 +35,9 @@ const BarChart = ({ data, title }: { data: { label: string; value: number }[], t
 };
 
 export default function AdminAnalytics() {
+  // Add this for client-side rendering only
+  const [isMounted, setIsMounted] = useState(false);
+  
   const { data: session, status } = useSession();
   const router = useRouter();
   
@@ -51,6 +55,11 @@ export default function AdminAnalytics() {
   });
   
   useEffect(() => {
+    setIsMounted(true);
+    
+    // Skip the rest during server rendering
+    if (typeof window === 'undefined') return;
+    
     if (status === 'unauthenticated') {
       router.push('/admin/login');
     }
@@ -157,6 +166,11 @@ export default function AdminAnalytics() {
       fetchStats();
     }
   }, [status, router]);
+  
+  // During server rendering or build, return minimal content
+  if (!isMounted) {
+    return <div className="min-h-screen bg-gray-100"></div>;
+  }
   
   if (status === 'loading' || loading) {
     return (

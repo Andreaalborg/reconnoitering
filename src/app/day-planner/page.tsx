@@ -45,6 +45,7 @@ interface ItineraryItem {
   transportMode?: 'WALK' | 'DRIVE' | 'TRANSIT' | 'BICYCLE';
   transportTime?: number; // in minutes
   transportDistance?: number; // in meters
+  transportError?: string; // For route calculation errors
   transportPolyline?: string; // encoded polyline for the route
   note?: string;
 }
@@ -203,6 +204,7 @@ function DayPlannerContent() {
     if (itinerary.length < 3) return; // Need at least 2 exhibitions with 1 transport
     
     setRouteCalculating(true);
+    let hadErrors = false;
     
     try {
       const updatedItinerary = [...itinerary];
@@ -211,62 +213,104 @@ function DayPlannerContent() {
       for (let i = 0; i < updatedItinerary.length; i++) {
         const item = updatedItinerary[i];
         
+        // Reset previous errors
+        item.transportError = undefined;
+        
         if (item.type === 'transport') {
           const prevItem = updatedItinerary[i-1];
           const nextItem = updatedItinerary[i+1];
           
-          // Ensure the previous and next items are exhibitions with coordinates
           if (prevItem?.type === 'exhibition' && nextItem?.type === 'exhibition' &&
               prevItem.exhibition?.location.coordinates && nextItem.exhibition?.location.coordinates) {
             
             const origin = prevItem.exhibition.location.coordinates;
             const destination = nextItem.exhibition.location.coordinates;
             
-            // Calculate travel time using Google Routes API
-            const travelMinutes = await calculateTravelTime(
-              { lat: origin.lat, lng: origin.lng },
-              { lat: destination.lat, lng: destination.lng },
-              item.transportMode
-            );
+            // Log coordinates being sent to API
+            console.log(`Calculating route for mode ${item.transportMode} from:`, origin, `to:`, destination);
             
-            // Update transport item
-            item.transportTime = travelMinutes;
-            
-            // Update end time
-            const startTimeMinutes = timeStringToMinutes(item.startTime);
-            const endTimeMinutes = startTimeMinutes + travelMinutes;
-            item.endTime = minutesToTimeString(endTimeMinutes);
+            try {
+              // Calculate travel time and distance
+              const routeInfo = await calculateTravelTime(
+                { lat: origin.lat, lng: origin.lng },
+                { lat: destination.lat, lng: destination.lng },
+                item.transportMode
+              );
+              
+              // Update transport item with calculated data
+              item.transportTime = Math.ceil(routeInfo.durationSeconds / 60);
+              item.transportDistance = routeInfo.distanceMeters;
+              item.transportPolyline = routeInfo.polyline;
+              item.transportError = undefined;
+              
+              // Update end time based on duration
+              const startTimeMinutes = timeStringToMinutes(item.startTime);
+              const endTimeMinutes = startTimeMinutes + item.transportTime;
+              item.endTime = minutesToTimeString(endTimeMinutes);
+              
+            } catch (error: any) {
+              console.error(`Error calculating route between ${prevItem.exhibition.title} and ${nextItem.exhibition.title}:`, error);
+              item.transportError = `Could not calculate route. Using default time.`;
+              hadErrors = true;
+              
+              // Use default time if API fails
+              item.transportTime = transportTime; // Use the default transport time set by user
+              item.transportDistance = undefined; // Clear distance
+              item.transportPolyline = undefined; // Clear polyline
+              
+              const startTimeMinutes = timeStringToMinutes(item.startTime);
+              const endTimeMinutes = startTimeMinutes + item.transportTime;
+              item.endTime = minutesToTimeString(endTimeMinutes);
+            }
             
             // Update times for subsequent items
-            let currentTimeInMinutes = endTimeMinutes;
+            let currentTimeInMinutes = timeStringToMinutes(item.endTime);
             
             for (let j = i + 1; j < updatedItinerary.length; j++) {
-              const nextItem = updatedItinerary[j];
-              nextItem.startTime = minutesToTimeString(currentTimeInMinutes);
+              const subsequentItem = updatedItinerary[j];
+              subsequentItem.startTime = minutesToTimeString(currentTimeInMinutes);
               
-              if (nextItem.type === 'exhibition') {
+              if (subsequentItem.type === 'exhibition') {
                 currentTimeInMinutes += visitDuration;
-              } else if (nextItem.type === 'transport') {
-                currentTimeInMinutes += nextItem.transportTime || transportTime;
-              } else if (nextItem.type === 'break') {
+              } else if (subsequentItem.type === 'transport') {
+                currentTimeInMinutes += subsequentItem.transportTime || transportTime;
+              } else if (subsequentItem.type === 'break') {
                 currentTimeInMinutes += 30;
               }
               
-              nextItem.endTime = minutesToTimeString(currentTimeInMinutes);
+              subsequentItem.endTime = minutesToTimeString(currentTimeInMinutes);
             }
           }
         }
       }
       
       setItinerary(updatedItinerary);
+      if (hadErrors) {
+        alert('Some routes could not be calculated accurately. Default travel times were used instead.');
+      }
       
     } catch (error) {
-      console.error('Error calculating routes:', error);
-      alert('Some routes could not be calculated accurately. Default travel times are used instead.');
+      console.error('Unexpected error during route calculation:', error);
+      alert('An unexpected error occurred while calculating routes.');
     } finally {
       setRouteCalculating(false);
     }
   };
+  
+  // Trigger initial route calculation when exhibitions and itinerary are ready
+  useEffect(() => {
+    if (itinerary.length > 0 && exhibitions.length > 0 && !loading && !routeCalculating) {
+      // Check if routes have already been calculated (e.g., by checking if transportTime exists on first transport item)
+      const firstTransport = itinerary.find(item => item.type === 'transport');
+      // We only auto-calculate if transportTime seems unset or still the default
+      if (firstTransport && firstTransport.transportTime === transportTime) { 
+        console.log("Attempting initial automatic route calculation...");
+        calculateRoutes();
+      }
+    }
+    // Dependencies: Run when itinerary structure or exhibitions change significantly
+    // Avoid depending on `routeCalculating` to prevent loops
+  }, [itinerary.length, exhibitions.length, loading]); // Simplified dependency array
   
   const handleDragEnd = (result: any) => {
     // Dropped outside the list
@@ -280,8 +324,10 @@ function DayPlannerContent() {
     
     setItinerary(items);
     
-    // Update times after reordering
-    setTimeout(updateItineraryTimes, 100);
+    // Update times and recalculate routes after reordering
+    console.log("Attempting automatic route calculation after drag...");
+    calculateRoutes(); 
+    // updateItineraryTimes will be called implicitly within calculateRoutes
   };
   
   const addBreak = () => {
@@ -333,21 +379,17 @@ function DayPlannerContent() {
     if (newItinerary[index].type === 'transport') {
       newItinerary[index].transportMode = mode;
       
-      // Update transport time based on mode (these are just estimates before calculating)
-      if (mode === 'WALK') {
-        newItinerary[index].transportTime = 45; // 45 minutes for walking
-      } else if (mode === 'TRANSIT') {
-        newItinerary[index].transportTime = 30; // 30 minutes for public transport
-      } else if (mode === 'DRIVE') {
-        newItinerary[index].transportTime = 20; // 20 minutes for driving
-      } else {
-        newItinerary[index].transportTime = 35; // 35 minutes for bicycling
-      }
-      
+      // Clear previous calculation results for this segment when mode changes
+      newItinerary[index].transportTime = undefined;
+      newItinerary[index].transportDistance = undefined;
+      newItinerary[index].transportError = undefined;
+
       setItinerary(newItinerary);
       
-      // Update all times
-      setTimeout(updateItineraryTimes, 100);
+      // Recalculate routes after changing transport mode
+      console.log("Attempting automatic route calculation after mode change...");
+      calculateRoutes(); 
+      // updateItineraryTimes will be called implicitly within calculateRoutes
     }
   };
   
@@ -384,14 +426,64 @@ function DayPlannerContent() {
     return `${hours}h ${minutes}m`;
   };
   
-  // Export to calendar
+  // Export to calendar (triggers download)
   const handleExportToCalendar = () => {
     try {
       const dateObj = new Date(date);
-      exportItineraryToCalendar(dateObj, itinerary);
+      exportItineraryToCalendar(dateObj, itinerary); // Assumes this function triggers download
+    } catch (error) { /* ... error handling ... */ }
+  };
+
+  // Handle sharing via email (mailto link with text summary - Final Formatting Attempt)
+  const handleShareByEmail = () => {
+    try {
+      // Generate a text summary of the itinerary
+      let planSummaryLines: string[] = [];
+
+      itinerary.forEach((item, index) => {
+        if (item.type === 'exhibition' && item.exhibition) {
+          // Add blank line before new exhibition (except the first)
+          if (index > 0) planSummaryLines.push(""); 
+          planSummaryLines.push(`${item.startTime} - ${item.endTime}: ${item.exhibition.title}`);
+          planSummaryLines.push(`   at ${item.exhibition.location.name}, ${item.exhibition.location.city}`);
+          if (item.note) {
+            planSummaryLines.push(`   Note: ${item.note}`);
+          }
+        } else if (item.type === 'transport') {
+          const distanceKm = item.transportDistance ? (item.transportDistance / 1000).toFixed(1) : null;
+          planSummaryLines.push(`   (${item.startTime} - ${item.endTime}) Travel via ${item.transportMode || 'Unknown'}`);
+          planSummaryLines.push(`      Duration: ${formatDuration(item.transportTime)}${distanceKm ? `, Distance: ${distanceKm} km` : ''}`);
+          // Add blank line AFTER transport details to separate from next exhibition
+          planSummaryLines.push(""); 
+        } else if (item.type === 'break') {
+           // Add blank line before break (except if first item)
+           if (index > 0) planSummaryLines.push(""); 
+           planSummaryLines.push(`${item.startTime} - ${item.endTime}: ${item.note || 'Scheduled break'}`);
+           // Add blank line AFTER break details to separate from next exhibition
+           planSummaryLines.push(""); 
+        }
+      });
+      
+      // Clean up potential double blank lines at the end
+      if (planSummaryLines[planSummaryLines.length - 1] === "" && planSummaryLines[planSummaryLines.length - 2] === "") {
+           planSummaryLines.pop();
+      }
+      
+      const planSummary = planSummaryLines.join('\n');
+
+      // Prepare mailto link
+      const dateString = new Date(date).toLocaleDateString('en-GB');
+      const subject = encodeURIComponent(`My Exhibition Plan for ${dateString}`);
+      const body = encodeURIComponent(
+        `Hi,\n\nHere\'s my planned exhibition itinerary for ${dateString}:\n\n${planSummary}\n\n(Remember to attach the downloaded .ics calendar file.)\n\nPlan created with Reconnoitering.`
+      );
+      const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+      
+      window.open(mailtoUrl);
+
     } catch (error) {
-      console.error('Error exporting to calendar:', error);
-      alert('Failed to create calendar file. Please try again.');
+      console.error('Error preparing share link:', error);
+      alert('Could not open email client.');
     }
   };
   
@@ -400,7 +492,7 @@ function DayPlannerContent() {
     setShowPrintVersion(!showPrintVersion);
   };
   
-  // Prepare map data
+  // Prepare map data, now including polylines
   const prepareMapData = () => {
     // Extract exhibition locations with coordinates
     const locationMarkers = itinerary
@@ -414,28 +506,59 @@ function DayPlannerContent() {
             lng: exhibition.location.coordinates!.lng
           },
           title: exhibition.title,
+          // Add index to info for clarity on the map
           info: `${index + 1}. ${exhibition.title} (${item.startTime}-${item.endTime})`
         };
       });
+      
+    // Extract valid polylines from the itinerary
+    const polylines = itinerary
+      .filter(item => item.type === 'transport' && item.transportPolyline)
+      .map(item => item.transportPolyline!); // Use non-null assertion
     
     // Calculate the center of all locations
+    let mapCenter = { lat: 48.8566, lng: 2.3522 }; // Default to Paris
     if (locationMarkers.length > 0) {
       const sumLat = locationMarkers.reduce((sum, marker) => sum + marker.position.lat, 0);
       const sumLng = locationMarkers.reduce((sum, marker) => sum + marker.position.lng, 0);
-      
-      return {
-        markers: locationMarkers,
-        center: {
-          lat: sumLat / locationMarkers.length,
-          lng: sumLng / locationMarkers.length
-        }
+      mapCenter = {
+        lat: sumLat / locationMarkers.length,
+        lng: sumLng / locationMarkers.length
       };
     }
     
     return {
-      markers: [],
-      center: { lat: 48.8566, lng: 2.3522 } // Default to Paris
+      markers: locationMarkers,
+      center: mapCenter,
+      polylines: polylines // Add polylines array
     };
+  };
+  
+  // Generate Google Maps URL for the entire itinerary
+  const generateOverallMapsUrl = () => {
+    const exhibitionStops = itinerary
+      .filter(item => item.type === 'exhibition' && item.exhibition?.location.coordinates)
+      .map(item => `${item.exhibition!.location.coordinates!.lat},${item.exhibition!.location.coordinates!.lng}`);
+      
+    if (exhibitionStops.length < 2) return '#'; // Need at least two points for a route
+    
+    return `https://www.google.com/maps/dir/${exhibitionStops.join('/')}`;
+  };
+  
+  // Helper function to format duration from minutes to hours and minutes
+  const formatDuration = (totalMinutes: number | undefined): string => {
+    if (totalMinutes === undefined || totalMinutes === null || isNaN(totalMinutes) || totalMinutes < 0) {
+      return '?? min';
+    }
+    if (totalMinutes < 60) {
+      return `${totalMinutes} min`;
+    }
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (minutes === 0) {
+      return `${hours} hr`;
+    }
+    return `${hours} hr ${minutes} min`;
   };
   
   if (loading) {
@@ -483,28 +606,39 @@ function DayPlannerContent() {
               </p>
             </div>
             
-            <div className="flex space-x-4 mt-4 md:mt-0">
+            <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
               <button 
                 onClick={handleExportToCalendar}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors inline-flex items-center"
+                title="Download .ics calendar file"
               >
-                <span className="flex items-center">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5 mr-2" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                    />
-                  </svg>
-                  Export to Calendar
-                </span>
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                  />
+                </svg>
+                Export Calendar (.ics)
+              </button>
+              
+              <button 
+                onClick={handleShareByEmail}
+                className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 transition-colors inline-flex items-center"
+                title="Share plan via email (opens mail client)"
+                disabled={itinerary.filter(item => item.type === 'exhibition').length === 0}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Share via Email
               </button>
               
               <button 
@@ -513,6 +647,22 @@ function DayPlannerContent() {
               >
                 Print / Share
               </button>
+              
+              {/* Add Overall Open in Maps Button */}
+              {itinerary.filter(item => item.type === 'exhibition').length >= 2 && (
+                 <a 
+                    href={generateOverallMapsUrl()}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    title="Open entire route in Google Maps"
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors inline-flex items-center"
+                  >
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 10V7m0 10L9 7" />
+                      </svg>
+                     View Full Route
+                  </a>
+              )}
               
               <Link
                 href={`/date-search?date=${date}`}
@@ -641,8 +791,9 @@ function DayPlannerContent() {
                 <GoogleMap
                   apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
                   center={mapData.center}
-                  zoom={12}
+                  zoom={12} // Consider adjusting zoom based on bounds later
                   markers={mapData.markers}
+                  polylines={mapData.polylines} // Pass polylines
                   height="384px"
                 />
               </div>
@@ -728,6 +879,7 @@ function DayPlannerContent() {
                                                 src={item.exhibition.coverImage} 
                                                 alt={item.exhibition.title}
                                                 fill
+                                                sizes="64px"
                                                 className="object-cover"
                                               />
                                             </div>
@@ -769,43 +921,88 @@ function DayPlannerContent() {
                                   
                                   {item.type === 'transport' && (
                                     <div>
-                                      <div className="flex items-center text-gray-700">
-                                        {/* Icon based on transport mode */}
-                                        <div className="mr-3">
-                                          {item.transportMode === 'WALK' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
-                                            </svg>
-                                          )}
-                                          {item.transportMode === 'TRANSIT' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path d="M12 2c-4.42 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-6H6V6h5v5zm5.5 6c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6h-5V6h5v5z" />
-                                            </svg>
-                                          )}
-                                          {item.transportMode === 'DRIVE' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
-                                            </svg>
-                                          )}
-                                          {item.transportMode === 'BICYCLE' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z" />
-                                            </svg>
-                                          )}
+                                      <div className="flex justify-between items-start text-gray-700">
+                                        <div className="flex items-center">
+                                          {/* Icon based on transport mode */}
+                                          <div className="mr-3">
+                                            {item.transportMode === 'WALK' && (
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
+                                              </svg>
+                                            )}
+                                            {item.transportMode === 'TRANSIT' && (
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path d="M12 2c-4.42 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-6H6V6h5v5zm5.5 6c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6h-5V6h5v5z" />
+                                              </svg>
+                                            )}
+                                            {item.transportMode === 'DRIVE' && (
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+                                              </svg>
+                                            )}
+                                            {item.transportMode === 'BICYCLE' && (
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z" />
+                                              </svg>
+                                            )}
+                                          </div>
+                                          
+                                          {/* Transport info */}
+                                          <div>
+                                            <div className="font-medium">
+                                              {item.transportMode === 'WALK' ? 'Walking' : 
+                                               item.transportMode === 'TRANSIT' ? 'Public Transport' : 
+                                               item.transportMode === 'DRIVE' ? 'Driving' :
+                                               'Cycling'}
+                                            </div>
+                                            <div className="text-sm">
+                                              Travel time: {formatDuration(item.transportTime)}
+                                              {item.transportDistance !== undefined && (
+                                                <span className="ml-2 text-gray-500">
+                                                  ({(item.transportDistance / 1000).toFixed(1)} km)
+                                                </span>
+                                              )}
+                                              {item.transportError && (
+                                                <span className="ml-2 text-red-500 text-xs">({item.transportError})</span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
                                         
-                                        {/* Transport info */}
-                                        <div>
-                                          <div className="font-medium">
-                                            {item.transportMode === 'WALK' ? 'Walking' : 
-                                             item.transportMode === 'TRANSIT' ? 'Public Transport' : 
-                                             item.transportMode === 'DRIVE' ? 'Driving' :
-                                             'Cycling'}
-                                          </div>
-                                          <div className="text-sm">
-                                            Travel time: {item.transportTime} minutes
-                                          </div>
-                                        </div>
+                                        {/* Add Google Maps Link */}
+                                        {(() => {
+                                          const prevItem = itinerary[index - 1];
+                                          const nextItem = itinerary[index + 1];
+                                          if (prevItem?.type === 'exhibition' && prevItem.exhibition?.location.coordinates &&
+                                              nextItem?.type === 'exhibition' && nextItem.exhibition?.location.coordinates) {
+                                                
+                                            const originCoords = `${prevItem.exhibition.location.coordinates.lat},${prevItem.exhibition.location.coordinates.lng}`;
+                                            const destCoords = `${nextItem.exhibition.location.coordinates.lat},${nextItem.exhibition.location.coordinates.lng}`;
+                                            let travelModeParam = 'transit';
+                                            switch(item.transportMode) {
+                                                case 'WALK': travelModeParam = 'walking'; break;
+                                                case 'DRIVE': travelModeParam = 'driving'; break;
+                                                case 'BICYCLE': travelModeParam = 'bicycling'; break;
+                                            }
+                                            const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${originCoords}&destination=${destCoords}&travelmode=${travelModeParam}`;
+
+                                            return (
+                                              <a 
+                                                href={mapsUrl}
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                title="Open route in Google Maps"
+                                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline mt-1 inline-flex items-center"
+                                              >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                                Open in Maps
+                                              </a>
+                                            );
+                                          }
+                                          return null; // Return null if coordinates are missing
+                                        })()}
                                       </div>
                                       
                                       {!showPrintVersion && (

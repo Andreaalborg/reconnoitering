@@ -4,6 +4,18 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
+import Select from 'react-select';
+
+// Reuse or define the European countries list
+const EUROPEAN_COUNTRIES = [
+  "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria", 
+  "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland", "France", 
+  "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia", 
+  "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro", 
+  "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "Russia", 
+  "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", 
+  "Turkey", "Ukraine", "United Kingdom", "UK", "Vatican City"
+].sort(); // Sort alphabetically for display
 
 interface Exhibition {
   _id: string;
@@ -28,99 +40,108 @@ interface Exhibition {
   tags: string[];
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+// --- Format options for react-select --- 
+const europeanCountryOptions: SelectOption[] = EUROPEAN_COUNTRIES.map(country => ({
+  value: country,
+  label: country
+}));
+
 function ExhibitionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Get search params from URL
-  const initialSearchText = searchParams.get('search') || '';
-  const initialCity = searchParams.get('city') || '';
-  const initialCountry = searchParams.get('country') || '';
+  // --- Initial filter values --- 
+  const initialSearchText = searchParams.get('q') || '';
+  const initialCityValues = (searchParams.get('cities') || '').split(',').filter(Boolean);
+  const initialCountryValues = (searchParams.get('countries') || '').split(',').filter(Boolean);
   const initialCategory = searchParams.get('category') || '';
   const initialArtist = searchParams.get('artist') || '';
   const initialTag = searchParams.get('tag') || '';
   const initialSort = searchParams.get('sort') || '-popularity';
   
-  // State for filters
+  // --- State for filters --- 
   const [searchText, setSearchText] = useState(initialSearchText);
-  const [selectedCity, setSelectedCity] = useState(initialCity);
-  const [selectedCountry, setSelectedCountry] = useState(initialCountry);
+  const [selectedCities, setSelectedCities] = useState<SelectOption[]>([]); // Now array of SelectOption
+  const [selectedCountries, setSelectedCountries] = useState<SelectOption[]>([]); // Now array of SelectOption
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedArtist, setSelectedArtist] = useState(initialArtist);
   const [selectedTag, setSelectedTag] = useState(initialTag);
   const [sortOption, setSortOption] = useState(initialSort);
   
-  // State for data
+  // --- State for data & options --- 
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [totalExhibitions, setTotalExhibitions] = useState(0);
-  
-  // Filter options
-  const [cities, setCities] = useState<string[]>([]);
-  const [countries, setCountries] = useState<string[]>([]);
+  const [cityOptions, setCityOptions] = useState<SelectOption[]>([]); // Options for City dropdown
   const [categories, setCategories] = useState<string[]>([]);
   const [artists, setArtists] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   
-  // Show more/less filters
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
-  
-  // Pagination
+  // --- Pagination State --- 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   
-  // Fetch exhibitions
+  // --- Initialize state from URL --- 
   useEffect(() => {
-    fetchExhibitions();
-  }, [currentPage, sortOption]);
-  
+      // Find matching options based on initial values from URL
+      const initialCountryObjects = europeanCountryOptions.filter(opt => initialCountryValues.includes(opt.value));
+      setSelectedCountries(initialCountryObjects);
+      // City options need to be fetched first, selection happens in fetchExhibitions
+  }, []); // Run only once on mount
+
+  // --- Fetch exhibitions and filter options --- 
+  useEffect(() => {
+    // Fetch based on current state
+    fetchExhibitions(); 
+  }, [currentPage, sortOption, selectedCountries, selectedCategory, selectedArtist, selectedTag]); // Re-fetch when these filters change
+
   const fetchExhibitions = async () => {
     setLoading(true);
+    setError('');
     try {
       const params = new URLSearchParams();
-      
-      // Pagination
+      // --- Add current filter states to params --- 
       params.append('limit', itemsPerPage.toString());
       params.append('skip', ((currentPage - 1) * itemsPerPage).toString());
-      
-      // Sort
       params.append('sort', sortOption);
-      
-      // Apply filters
-      if (searchText) params.append('search', searchText);
-      if (selectedCity) params.append('city', selectedCity);
-      if (selectedCountry) params.append('country', selectedCountry);
+      if (searchText) params.append('q', searchText);
+      // Send selected city values
+      if (selectedCities.length > 0) params.append('cities', selectedCities.map(c => c.value).join(','));
+      // Send selected country values
+      if (selectedCountries.length > 0) params.append('countries', selectedCountries.map(c => c.value).join(',')); 
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedArtist) params.append('artist', selectedArtist);
       if (selectedTag) params.append('tag', selectedTag);
       
       const response = await fetch(`/api/exhibitions?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch exhibitions');
-      }
-      
+      if (!response.ok) { throw new Error('Failed to fetch exhibitions'); }
       const data = await response.json();
       
       if (data.success) {
         setExhibitions(data.data);
         setTotalExhibitions(data.meta.total || 0);
         
-        // Update filter options
-        if (data.meta && data.meta.filter_options) {
-          setCities(data.meta.filter_options.cities || []);
-          setCountries(data.meta.filter_options.countries || []);
-          setCategories(data.meta.filter_options.categories || []);
-          
-          // In a real app, these would come from the API
-          // For now, we'll leave them empty or add some placeholder values
-          setArtists(data.meta.filter_options.artists || []);
-          setTags(data.meta.filter_options.tags || []);
+        if (data.meta?.filter_options) {
+            // Update City options based on API response (filtered by country etc.)
+            const fetchedCityOptions = (data.meta.filter_options.cities || []).map((city: string) => ({ value: city, label: city }));
+            setCityOptions(fetchedCityOptions);
+            
+            // Re-apply initial city selection if applicable, now that options are loaded
+            const initialCityValuesFromUrl = (searchParams.get('cities') || '').split(',').filter(Boolean);
+            setSelectedCities(fetchedCityOptions.filter(opt => initialCityValuesFromUrl.includes(opt.value)));
+            
+            // Update other dynamic filters
+            setCategories(data.meta.filter_options.categories || []);
+            setArtists(data.meta.filter_options.artists || []);
+            setTags(data.meta.filter_options.tags || []);
         }
-      } else {
-        throw new Error(data.error || 'Failed to fetch exhibitions');
-      }
+      } else { throw new Error(data.error || 'API error'); }
     } catch (err: any) {
       console.error('Error fetching exhibitions:', err);
       setError(err.message || 'Failed to load exhibitions');
@@ -129,78 +150,68 @@ function ExhibitionsContent() {
     }
   };
   
-  // Handle filter changes
-  const handleFilterChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-    filterType: string
-  ) => {
-    const { value } = e.target;
-    
-    // Reset to page 1 when filter changes
-    setCurrentPage(1);
-    
-    switch (filterType) {
-      case 'search':
-        setSearchText(value);
-        break;
-      case 'city':
-        setSelectedCity(value);
-        break;
-      case 'country':
-        setSelectedCountry(value);
-        break;
-      case 'category':
-        setSelectedCategory(value);
-        break;
-      case 'artist':
-        setSelectedArtist(value);
-        break;
-      case 'tag':
-        setSelectedTag(value);
-        break;
-      case 'sort':
-        setSortOption(value);
-        break;
-      default:
-        break;
-    }
-  };
+  // --- Handlers --- 
   
-  // Apply filters
-  const applyFilters = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    // Update URL with current filters
+  // Handle search text input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchText(e.target.value);
+      // Optionally trigger fetch immediately or wait for Apply Filters
+  };
+
+  // Handle simple select changes (Category, Artist, Tag, Sort)
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>, filterType: string) => {
+      setCurrentPage(1);
+      const { value } = e.target;
+      switch (filterType) {
+          case 'category': setSelectedCategory(value); break;
+          case 'artist': setSelectedArtist(value); break;
+          case 'tag': setSelectedTag(value); break;
+          case 'sort': setSortOption(value); break; // Fetch is triggered by useEffect
+      }
+  };
+
+  // Handle Multi-Select changes (Country, City)
+  const handleMultiSelectChange = (selectedOptions: readonly SelectOption[] | null, filterType: 'country' | 'city') => {
+      setCurrentPage(1);
+      const optionsArray = selectedOptions ? Array.from(selectedOptions) : [];
+      if (filterType === 'country') {
+          setSelectedCountries(optionsArray);
+          // When country changes, we might want to clear city selection and fetch new city options
+          setSelectedCities([]); 
+          // Fetching happens via useEffect dependency on selectedCountries
+      } else if (filterType === 'city') {
+          setSelectedCities(optionsArray);
+          // No need to fetch again here, wait for Apply Filters button
+      }
+  };
+
+  // Apply filters (called by form submit)
+  const applyFilters = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
     const params = new URLSearchParams();
-    if (searchText) params.set('search', searchText);
-    if (selectedCity) params.set('city', selectedCity);
-    if (selectedCountry) params.set('country', selectedCountry);
+    if (searchText) params.set('q', searchText);
+    if (selectedCities.length > 0) params.set('cities', selectedCities.map(c => c.value).join(','));
+    if (selectedCountries.length > 0) params.set('countries', selectedCountries.map(c => c.value).join(','));
     if (selectedCategory) params.set('category', selectedCategory);
     if (selectedArtist) params.set('artist', selectedArtist);
     if (selectedTag) params.set('tag', selectedTag);
     if (sortOption !== '-popularity') params.set('sort', sortOption);
-    
-    // Update URL without refreshing the page
     router.push(`/exhibitions?${params.toString()}`);
-    
-    // Fetch exhibitions with new filters
-    fetchExhibitions();
+    fetchExhibitions(); // Fetch with new filters
   };
   
   // Clear all filters
   const clearFilters = () => {
+    setCurrentPage(1);
     setSearchText('');
-    setSelectedCity('');
-    setSelectedCountry('');
+    setSelectedCities([]);
+    setSelectedCountries([]);
     setSelectedCategory('');
     setSelectedArtist('');
     setSelectedTag('');
     setSortOption('-popularity');
-    setCurrentPage(1);
-    
     router.push('/exhibitions');
-    
-    // Fetch exhibitions with cleared filters
     fetchExhibitions();
   };
   
@@ -276,78 +287,114 @@ function ExhibitionsContent() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Exhibitions</h1>
-          
-          <div>
-            <button
-              onClick={() => setShowMoreFilters(!showMoreFilters)}
-              className="text-rose-500 hover:text-rose-600"
-            >
-              {showMoreFilters ? 'Less Filters' : 'More Filters'} 
-              <span className="ml-1">{showMoreFilters ? '△' : '▽'}</span>
-            </button>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Exhibitions in Europe</h1>
         
+        {/* Filter Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <form onSubmit={applyFilters} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Search */}
-              <div className="col-span-1 md:col-span-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchText}
-                    onChange={(e) => handleFilterChange(e, 'search')}
-                    placeholder="Search exhibitions, artists, venues..."
-                    className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+            {/* Search Bar */}
+            <div className="relative">
+               <input
+                 type="text"
+                 value={searchText}
+                 onChange={handleSearchChange}
+                 placeholder="Search exhibitions, artists, venues..."
+                 className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+               />
+               <button
+                 type="submit"
+                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+               >
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                 </svg>
+               </button>
+            </div>
+
+            {/* Filter Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               
-              {/* Basic filters always shown */}
+              {/* Country Filter (Multi-Select Dropdown) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <select
-                  value={selectedCity}
-                  onChange={(e) => handleFilterChange(e, 'city')}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
-                >
-                  <option value="">All Cities</option>
-                  {cities.map((city, index) => (
-                    <option key={index} value={city}>{city}</option>
-                  ))}
-                </select>
+                <label htmlFor="countries-select" className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                <Select<SelectOption, true>
+                  id="countries-select"
+                  instanceId="countries-select-instance"
+                  isMulti
+                  options={europeanCountryOptions}
+                  value={selectedCountries}
+                  onChange={(options) => handleMultiSelectChange(options, 'country')}
+                  placeholder="Select countries..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  closeMenuOnSelect={false}
+                />
               </div>
               
+              {/* City Filter (Multi-Select Dropdown - Dynamic Options) */}
+              <div>
+                <label htmlFor="cities-select" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <Select<SelectOption, true>
+                  id="cities-select"
+                  instanceId="cities-select-instance"
+                  isMulti
+                  options={cityOptions}
+                  value={selectedCities}
+                  onChange={(options) => handleMultiSelectChange(options, 'city')}
+                  placeholder="Select cities..."
+                  noOptionsMessage={() => selectedCountries.length === 0 ? 'Select a country first' : 'No cities found'}
+                  isDisabled={loading}
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  closeMenuOnSelect={false}
+                />
+              </div>
+              
+              {/* Category Filter (Select) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
                   value={selectedCategory}
-                  onChange={(e) => handleFilterChange(e, 'category')}
+                  onChange={(e) => handleSelectChange(e, 'category')}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
                 >
                   <option value="">All Categories</option>
-                  {categories.map((category, index) => (
-                    <option key={index} value={category}>{category}</option>
-                  ))}
+                  {categories.map((cat, i) => <option key={i} value={cat}>{cat}</option>)} 
                 </select>
               </div>
               
+              {/* Artist Filter (Select) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Artist</label>
+                 <select
+                  value={selectedArtist}
+                  onChange={(e) => handleSelectChange(e, 'artist')}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+                >
+                  <option value="">All Artists</option>
+                  {artists.map((a, i) => <option key={i} value={a}>{a}</option>)} 
+                </select>
+              </div>
+
+              {/* Tag Filter (Select) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tag</label>
+                 <select
+                  value={selectedTag}
+                  onChange={(e) => handleSelectChange(e, 'tag')}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+                >
+                  <option value="">All Tags</option>
+                  {tags.map((t, i) => <option key={i} value={t}>{t}</option>)} 
+                </select>
+              </div>
+
+               {/* Sort By Filter (Select) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
                 <select
                   value={sortOption}
-                  onChange={(e) => handleFilterChange(e, 'sort')}
+                  onChange={(e) => handleSelectChange(e, 'sort')}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
                 >
                   <option value="-popularity">Most Popular</option>
@@ -357,74 +404,29 @@ function ExhibitionsContent() {
                   <option value="-title">Title (Z-A)</option>
                 </select>
               </div>
-              
-              {/* Advanced filters (hidden by default) */}
-              {showMoreFilters && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                    <select
-                      value={selectedCountry}
-                      onChange={(e) => handleFilterChange(e, 'country')}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    >
-                      <option value="">All Countries</option>
-                      {countries.map((country, index) => (
-                        <option key={index} value={country}>{country}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Artist</label>
-                    <select
-                      value={selectedArtist}
-                      onChange={(e) => handleFilterChange(e, 'artist')}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    >
-                      <option value="">All Artists</option>
-                      {artists.map((artist, index) => (
-                        <option key={index} value={artist}>{artist}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                    <select
-                      value={selectedTag}
-                      onChange={(e) => handleFilterChange(e, 'tag')}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    >
-                      <option value="">All Tags</option>
-                      {tags.map((tag, index) => (
-                        <option key={index} value={tag}>{tag}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
+
             </div>
-            
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-              >
-                Clear Filters
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-white bg-rose-500 rounded-lg hover:bg-rose-600"
-              >
-                Apply Filters
-              </button>
+
+            {/* Buttons */} 
+            <div className="flex justify-end space-x-3">
+                <button 
+                    type="button" 
+                    onClick={clearFilters}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    Clear Filters
+                </button>
+                <button 
+                    type="submit"
+                    className="px-6 py-2 bg-rose-500 text-white rounded-md text-sm font-medium hover:bg-rose-600"
+                >
+                    Apply Filters
+                </button>
             </div>
           </form>
         </div>
         
-        {/* Results */}
+        {/* Results Section */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>

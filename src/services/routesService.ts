@@ -52,11 +52,21 @@ interface Coordinates {
           googleTravelMode = 'WALKING';
           break;
         case 'BICYCLE':
-          googleTravelMode = 'BICYCLING';
+          googleTravelMode = 'BICYCLE';
           break;
         case 'TRANSIT':
           googleTravelMode = 'TRANSIT';
           break;
+      }
+      
+      // --- Let's double-check the actual API v2 values ---
+      // According to docs: DRIVE, BICYCLE, WALK, TRANSIT
+      switch (travelMode) {
+        case 'DRIVE': googleTravelMode = 'DRIVE'; break;
+        case 'WALK': googleTravelMode = 'WALK'; break;
+        case 'BICYCLE': googleTravelMode = 'BICYCLE'; break;
+        case 'TRANSIT': googleTravelMode = 'TRANSIT'; break;
+        // default remains 'WALK' if something unexpected is passed
       }
       
       // Build the request URL
@@ -64,7 +74,7 @@ interface Coordinates {
 
       
       // Build the request body
-      const requestBody = {
+      const requestBody: any = {
         origin: {
           location: {
             latLng: {
@@ -82,7 +92,6 @@ interface Coordinates {
           }
         },
         travelMode: googleTravelMode,
-        routingPreference: 'TRAFFIC_AWARE',
         computeAlternativeRoutes: false,
         routeModifiers: {
           avoidTolls: false,
@@ -92,6 +101,11 @@ interface Coordinates {
         languageCode: 'en-US',
         units: 'METRIC'
       };
+      
+      // Only add routingPreference if DRIVE mode
+      if (googleTravelMode === 'DRIVE') {
+        requestBody.routingPreference = 'TRAFFIC_AWARE';
+      }
       
       // Add departure time if provided
       if (departureTime) {
@@ -115,6 +129,11 @@ interface Coordinates {
       }
       
       const data = await response.json();
+      
+      // Check if routes were found
+      if (!data.routes || data.routes.length === 0) {
+        throw new Error('No route found between the specified locations for the selected travel mode.');
+      }
       
       // Extract route information from the response
       const route = data.routes[0];
@@ -164,7 +183,7 @@ interface Coordinates {
     origin: Coordinates,
     destination: Coordinates,
     mode: 'DRIVE' | 'WALK' | 'BICYCLE' | 'TRANSIT' = 'TRANSIT'
-  ): Promise<number> {
+  ): Promise<{ durationSeconds: number; distanceMeters: number; polyline: string }> {
     try {
       const route = await calculateRoute({
         origin,
@@ -172,22 +191,22 @@ interface Coordinates {
         travelMode: mode
       });
       
-      // Return duration in minutes
-      return Math.ceil(route.duration.seconds / 60);
+      // Return duration, distance, and polyline
+      return {
+        durationSeconds: route.duration.seconds,
+        distanceMeters: route.distance.meters,
+        polyline: route.polyline
+      };
     } catch (error) {
       console.error('Error calculating travel time:', error);
       
-      // Return default times based on mode
+      // Return default times, zero distance, and empty polyline on error
+      let defaultDurationSeconds = 1800; // 30 minutes
       switch (mode) {
-        case 'DRIVE':
-          return 20; // 20 minutes default for driving
-        case 'WALK':
-          return 45; // 45 minutes default for walking
-        case 'BICYCLE':
-          return 30; // 30 minutes default for bicycling
-        case 'TRANSIT':
-        default:
-          return 30; // 30 minutes default for transit
+        case 'DRIVE': defaultDurationSeconds = 1200; break; // 20 min
+        case 'WALK': defaultDurationSeconds = 2700; break; // 45 min
+        case 'BICYCLE': defaultDurationSeconds = 2100; break; // 35 min
       }
+      return { durationSeconds: defaultDurationSeconds, distanceMeters: 0, polyline: '' };
     }
   }

@@ -1,15 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     await dbConnect();
     
-    const exhibition = await Exhibition.findById(params.id);
+    const id = context.params.id;
+    
+    console.log(`Fetching exhibition with ID: ${id}`);
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Exhibition ID missing' }, { status: 400 });
+    }
+
+    const exhibition = await Exhibition.findById(id);
     
     if (!exhibition) {
       return NextResponse.json(
@@ -29,16 +37,18 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     await dbConnect();
     
+    const { id } = params;
+    
     const body = await request.json();
     
     const exhibition = await Exhibition.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     );
@@ -61,13 +71,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     await dbConnect();
     
-    const exhibition = await Exhibition.findByIdAndDelete(params.id);
+    const { id } = params;
+    
+    const exhibition = await Exhibition.findByIdAndDelete(id);
     
     if (!exhibition) {
       return NextResponse.json(

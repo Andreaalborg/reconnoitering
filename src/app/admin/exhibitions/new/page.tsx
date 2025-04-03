@@ -1,13 +1,25 @@
 // src/app/admin/exhibitions/new/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import ImageUpload from '@/components/ImageUpload';
 import GoogleMap from '@/components/GoogleMap';
+import { Loader } from '@googlemaps/js-api-loader';
+
+// Reuse or redefine the European countries list (consider a shared constant later)
+const EUROPEAN_COUNTRIES_LOWER = [
+    "albania", "andorra", "austria", "belarus", "belgium", "bosnia and herzegovina", "bulgaria", 
+    "croatia", "cyprus", "czech republic", "denmark", "estonia", "finland", "france", 
+    "germany", "greece", "hungary", "iceland", "ireland", "italy", "kosovo", "latvia", 
+    "liechtenstein", "lithuania", "luxembourg", "malta", "moldova", "monaco", "montenegro", 
+    "netherlands", "north macedonia", "norway", "poland", "portugal", "romania", "russia", 
+    "san marino", "serbia", "slovakia", "slovenia", "spain", "sweden", "switzerland", 
+    "turkey", "ukraine", "united kingdom", "uk", "vatican city"
+];
 
 export default function AddExhibition() {
   const { status } = useSession();
@@ -53,13 +65,19 @@ export default function AddExhibition() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 48.8566, lng: 2.3522 }); // Default to Paris
-  const [showMap, setShowMap] = useState(false);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 59.9139, lng: 10.7522 }); // Default to Oslo
+  const [mapMarkerPos, setMapMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [countryWarning, setCountryWarning] = useState<string>(''); // State for country warning
   
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    // Clear warning if country field is being changed
+    if (name === 'location.country') {
+        setCountryWarning(''); 
+    }
+
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       if (parent === 'location' && child === 'coordinates') {
@@ -88,6 +106,14 @@ export default function AddExhibition() {
         ...formData,
         [name]: value
       });
+    }
+    
+    // Check country after state update (using useEffect might be slightly cleaner, but this works)
+    if (name === 'location.country') {
+        const countryLower = value.trim().toLowerCase();
+        if (countryLower && !EUROPEAN_COUNTRIES_LOWER.includes(countryLower)) {
+            setCountryWarning('Warning: This country is outside the typical European focus.');
+        }
     }
   };
   
@@ -128,62 +154,120 @@ export default function AddExhibition() {
     });
   };
   
-  // Show the map
-  const handleShowMap = () => {
-    setShowMap(true);
+  // Function to perform reverse geocoding and update form
+  const reverseGeocodeAndUpdateForm = useCallback(async (location: { lat: number; lng: number }) => {
+    setLoading(true);
+    setError('');
+    console.log("Performing reverse geocoding for:", location);
     
-    // If coordinates are already set, center the map on them
-    if (formData.location.coordinates.lat && formData.location.coordinates.lng) {
-      setMapCenter({
-        lat: parseFloat(formData.location.coordinates.lat as string),
-        lng: parseFloat(formData.location.coordinates.lng as string)
+    try {
+      const loader = new Loader({
+        apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+        version: 'weekly',
+        libraries: ['places', 'geometry', 'geocoding']
       });
-    }
-    
-    // If city is set, try to geocode it
-    else if (formData.location.city) {
+      const google = await loader.load();
       const geocoder = new google.maps.Geocoder();
-      const address = `${formData.location.city}, ${formData.location.country}`;
-      
-      geocoder.geocode({ address }, (results, status) => {
+
+      geocoder.geocode({ location }, (results, status) => {
         if (status === 'OK' && results && results[0]) {
-          const location = results[0].geometry.location;
-          const newCenter = {
-            lat: location.lat(),
-            lng: location.lng()
+          console.log("Reverse geocode results:", results);
+          const firstResult = results[0];
+          const addressComponents = firstResult.address_components || [];
+          
+          // Helper function to extract address component
+          const getAddressComponent = (type: string): string => {
+              const component = addressComponents.find(c => c.types.includes(type));
+              return component ? component.long_name : '';
           };
+
+          const streetNumber = getAddressComponent('street_number');
+          const route = getAddressComponent('route');
+          let extractedAddress = streetNumber ? `${streetNumber} ${route}` : route;
           
-          setMapCenter(newCenter);
-          
-          // Update form coordinates
-          setFormData({
-            ...formData,
+          const city = getAddressComponent('locality') || getAddressComponent('postal_town');
+          const country = getAddressComponent('country');
+
+          // Fallback to formatted address if specific components aren't found
+          if (!extractedAddress) {
+            extractedAddress = firstResult.formatted_address?.split(',')[0] || '';
+          }
+
+          setFormData(prevData => ({
+            ...prevData,
             location: {
-              ...formData.location,
+              ...prevData.location,
+              // Only update address/city/country if geocoding provided a value
+              address: extractedAddress || prevData.location.address,
+              city: city || prevData.location.city, 
+              country: country || prevData.location.country,
               coordinates: {
-                lat: newCenter.lat.toString(),
-                lng: newCenter.lng.toString()
+                lat: location.lat.toString(),
+                lng: location.lng.toString()
               }
             }
-          });
+          }));
+        } else {
+          console.error('Reverse geocode failed:', status);
+          setError('Could not determine address for the selected location.');
         }
+        setLoading(false);
       });
+    } catch (error) {
+      console.error('Error during reverse geocoding setup:', error);
+      setError('Failed to initialize geocoding service.');
+      setLoading(false);
     }
-  };
-  
-  // Handle map click to set coordinates
-  const handleMapClick = (location: { lat: number; lng: number }) => {
-    setFormData({
-      ...formData,
+  }, []);
+
+  // Update form data and marker when map is clicked
+  const handleMapClick = useCallback((location: { lat: number; lng: number }) => {
+    setFormData(prevData => ({
+      ...prevData,
       location: {
-        ...formData.location,
+        ...prevData.location,
         coordinates: {
           lat: location.lat.toString(),
           lng: location.lng.toString()
         }
       }
-    });
-  };
+    }));
+    setMapMarkerPos(location);
+    reverseGeocodeAndUpdateForm(location); // Call reverse geocoding
+  }, [reverseGeocodeAndUpdateForm]);
+
+  // Update form data and marker when marker is dragged
+  const handleMarkerDragEnd = useCallback((location: { lat: number; lng: number }) => {
+    setFormData(prevData => ({
+      ...prevData,
+      location: {
+        ...prevData.location,
+        coordinates: {
+          lat: location.lat.toString(),
+          lng: location.lng.toString()
+        }
+      }
+    }));
+    setMapMarkerPos(location);
+    reverseGeocodeAndUpdateForm(location); // Call reverse geocoding
+  }, [reverseGeocodeAndUpdateForm]);
+
+  // Update marker pos when form coordinates change manually
+  useEffect(() => {
+    // Also try to center map based on initial coordinates if available
+    const lat = parseFloat(formData.location.coordinates.lat as string);
+    const lng = parseFloat(formData.location.coordinates.lng as string);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setMapMarkerPos({ lat, lng });
+      // Set map center only if it hasn't been set by user interaction yet
+      // This check might need refinement depending on desired behavior
+      if (mapCenter.lat === 48.8566) { // Check if still default Paris center
+           setMapCenter({ lat, lng });
+      }
+    } else {
+      setMapMarkerPos(null);
+    }
+  }, [formData.location.coordinates.lat, formData.location.coordinates.lng]);
   
   // Handle place selection from the map search box
   const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
@@ -194,40 +278,44 @@ export default function AddExhibition() {
       lng: place.geometry.location.lng()
     };
     
-    // Extract address components
-    let city = '';
-    let country = '';
-    let address = place.formatted_address || '';
-    
-    if (place.address_components) {
-      place.address_components.forEach(component => {
-        const types = component.types;
-        
-        if (types.includes('locality')) {
-          city = component.long_name;
-        } else if (types.includes('country')) {
-          country = component.long_name;
-        }
-      });
+    // Extract address components using the same helper logic
+    const addressComponents = place.address_components || [];
+    const getAddressComponent = (type: string): string => {
+        const component = addressComponents.find(c => c.types.includes(type));
+        return component ? component.long_name : '';
+    };
+
+    const streetNumber = getAddressComponent('street_number');
+    const route = getAddressComponent('route');
+    let extractedAddress = streetNumber ? `${streetNumber} ${route}` : route;
+    const city = getAddressComponent('locality') || getAddressComponent('postal_town');
+    const country = getAddressComponent('country');
+
+    // Fallback for address
+    if (!extractedAddress) {
+       extractedAddress = place.formatted_address?.split(',')[0] || '';
     }
     
     // Update form data
-    setFormData({
-      ...formData,
+    setFormData(prevData => ({
+      ...prevData,
       location: {
-        ...formData.location,
-        address: address || formData.location.address,
-        city: city || formData.location.city,
-        country: country || formData.location.country,
+        ...prevData.location,
+        // Use place name if available, otherwise keep existing venue name
+        name: place.name || prevData.location.name, 
+        address: extractedAddress || prevData.location.address,
+        city: city || prevData.location.city,
+        country: country || prevData.location.country,
         coordinates: {
           lat: newLocation.lat.toString(),
           lng: newLocation.lng.toString()
         }
       }
-    });
+    }));
     
-    // Update map center
+    // Update map center and marker position
     setMapCenter(newLocation);
+    setMapMarkerPos(newLocation);
   };
   
   // Helper to get current coordinates from browser
@@ -248,7 +336,6 @@ export default function AddExhibition() {
           });
           
           setMapCenter({ lat: latitude, lng: longitude });
-          setShowMap(true);
         },
         (error) => {
           console.error('Error getting location:', error);
@@ -283,6 +370,7 @@ export default function AddExhibition() {
         },
         body: JSON.stringify({
           ...formData,
+          closedDay: formData.closedDay || null,
           images: additionalImages
         }),
       });
@@ -492,11 +580,10 @@ export default function AddExhibition() {
             
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-4">Location</h2>
-              <div className="grid grid-cols-1 gap-6">
+              {/* Location Form Fields (now occupy full width initially) */}
+              <div className="space-y-6 mb-6"> {/* Add margin-bottom */} 
                 <div>
-                  <label htmlFor="location.name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Venue Name *
-                  </label>
+                  <label htmlFor="location.name" className="block text-sm font-medium text-gray-700 mb-1"> Venue Name * </label>
                   <input
                     type="text"
                     id="location.name"
@@ -507,11 +594,8 @@ export default function AddExhibition() {
                     className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                   />
                 </div>
-                
                 <div>
-                  <label htmlFor="location.address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Address
-                  </label>
+                  <label htmlFor="location.address" className="block text-sm font-medium text-gray-700 mb-1"> Address </label>
                   <input
                     type="text"
                     id="location.address"
@@ -521,12 +605,9 @@ export default function AddExhibition() {
                     className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="location.city" className="block text-sm font-medium text-gray-700 mb-1">
-                      City *
-                    </label>
+                    <label htmlFor="location.city" className="block text-sm font-medium text-gray-700 mb-1"> City * </label>
                     <input
                       type="text"
                       id="location.city"
@@ -537,117 +618,79 @@ export default function AddExhibition() {
                       className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                     />
                   </div>
-                  
                   <div>
-                    <label htmlFor="location.country" className="block text-sm font-medium text-gray-700 mb-1">
-                      Country *
-                    </label>
-                    <input
+                    <label htmlFor="location.country" className="block text-sm font-medium text-gray-700 mb-1"> Country * </label>
+                    <input 
                       type="text"
                       id="location.country"
                       name="location.country"
                       value={formData.location.country}
                       onChange={handleChange}
+                      placeholder="e.g. Norway"
                       required
                       className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                     />
+                    {/* Display Country Warning */}
+                    {countryWarning && (
+                      <p className="mt-1 text-xs text-yellow-600">{countryWarning}</p>
+                    )}
                   </div>
                 </div>
-                
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Location on Map
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={handleGetLocation}
-                        className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
-                      >
-                        Get My Location
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleShowMap}
-                        className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
-                      >
-                        {showMap ? 'Update Map' : 'Show Map'}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {showMap ? (
-                    <div className="h-96 rounded-lg overflow-hidden mb-4">
-                      <GoogleMap
-                        apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-                        center={mapCenter}
-                        zoom={14}
-                        markers={formData.location.coordinates.lat && formData.location.coordinates.lng ? [
-                          {
-                            id: 'venue',
-                            position: {
-                              lat: parseFloat(formData.location.coordinates.lat as string),
-                              lng: parseFloat(formData.location.coordinates.lng as string)
-                            },
-                            title: formData.location.name || 'Selected Location'
-                          }
-                        ] : []}
-                        onClick={handleMapClick}
-                        showSearchBox={true}
-                        onPlaceSelected={handlePlaceSelected}
-                        height="384px"
-                      />
-                    </div>
-                  ) : (
-                    <div 
-                      className="h-48 bg-gray-100 rounded-lg flex items-center justify-center mb-4 cursor-pointer"
-                      onClick={handleShowMap}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div>
+                     <label htmlFor="location.coordinates.lat" className="block text-sm font-medium text-gray-700 mb-1"> Latitude </label>
+                     <input
+                       type="text"
+                       id="location.coordinates.lat"
+                       name="location.coordinates.lat"
+                       value={formData.location.coordinates.lat}
+                       onChange={handleChange}
+                       placeholder="e.g. 59.9139"
+                       className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                     />
+                   </div>
+                   <div>
+                     <label htmlFor="location.coordinates.lng" className="block text-sm font-medium text-gray-700 mb-1"> Longitude </label>
+                     <input
+                       type="text"
+                       id="location.coordinates.lng"
+                       name="location.coordinates.lng"
+                       value={formData.location.coordinates.lng}
+                       onChange={handleChange}
+                       placeholder="e.g. 10.7522"
+                       className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                     />
+                   </div>
+                </div>
+                 <p className="mt-1 text-xs text-gray-500">
+                   Coordinates are set automatically when using the map or search.
+                 </p>
+                 <button
+                      type="button"
+                      onClick={handleGetLocation}
+                      className="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1 text-gray-700"
                     >
-                      <div className="text-center text-gray-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                        <p>Click to show map</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="location.coordinates.lat" className="block text-sm font-medium text-gray-700 mb-1">
-                        Latitude
-                      </label>
-                      <input
-                        type="text"
-                        id="location.coordinates.lat"
-                        name="location.coordinates.lat"
-                        value={formData.location.coordinates.lat}
-                        onChange={handleChange}
-                        placeholder="e.g. 51.5074"
-                        className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="location.coordinates.lng" className="block text-sm font-medium text-gray-700 mb-1">
-                        Longitude
-                      </label>
-                      <input
-                        type="text"
-                        id="location.coordinates.lng"
-                        name="location.coordinates.lng"
-                        value={formData.location.coordinates.lng}
-                        onChange={handleChange}
-                        placeholder="e.g. -0.1278"
-                        className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                      />
-                    </div>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    These coordinates are needed for the map view and nearby exhibitions feature. You can set them using the map above.
-                  </p>
-                </div>
+                      Use My Current Location
+                 </button>
+              </div>
+
+              {/* Map Section (Now below the fields) */}
+              <div className="border p-4 rounded-lg shadow-sm min-h-[450px]"> {/* Adjusted min-height */} 
+                <p className="text-sm text-gray-600 mb-2">
+                  Click map or drag marker to set location. Use search to find a place.
+                </p>
+                <GoogleMap
+                  apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+                  center={mapCenter}
+                  zoom={mapMarkerPos ? 15 : 10} 
+                  height="450px" // Match container height potentially
+                  onClick={handleMapClick} 
+                  mainMarker={mapMarkerPos ? { id: 'edit-marker', position: mapMarkerPos, title: 'Exhibition Location' } : undefined}
+                  isMainMarkerDraggable={true}
+                  onMainMarkerDragEnd={handleMarkerDragEnd}
+                  showSearchBox={true}
+                  onPlaceSelected={handlePlaceSelected}
+                />
               </div>
             </div>
             

@@ -1,7 +1,23 @@
+'use client';
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import Header from '@/components/Header';
 
 export default function AboutPage() {
+  // Client-side only rendering
+  const [isMounted, setIsMounted] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // During server-side rendering or build, return minimal content
+  if (!isMounted) {
+    return <div className="min-h-screen bg-gray-50"></div>;
+  }
+  
+  // Regular component for client rendering
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />

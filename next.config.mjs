@@ -1,5 +1,3 @@
-// next.config.mjs - Final version
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -14,10 +12,9 @@ const nextConfig = {
       'upload.wikimedia.org'
     ],
   },
-  serverExternalPackages: ['bcrypt'],
-  // Disable static exports that could cause problems
+  // Turn off output export which requires static parameters
   output: 'standalone',
-  // Configuration for app directory
+  // Use experimental options that work with Next.js 15
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

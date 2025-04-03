@@ -1,11 +1,13 @@
 // src/app/date-search/page.tsx - Fixed version
 'use client';
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
 import Link from 'next/link';
+import Select from 'react-select';
 
 interface Exhibition {
   _id: string;
@@ -30,6 +32,12 @@ interface Exhibition {
   closedDay?: string; // Added for weekly closing day
 }
 
+// Interface for react-select options
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 function DateSearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -50,96 +58,118 @@ function DateSearchContent() {
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [cities, setCities] = useState<string[]>([]);
-  const [selectedCity, setSelectedCity] = useState<string>('');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [cities, setCities] = useState<SelectOption[]>([]);
+  const [selectedCity, setSelectedCity] = useState<SelectOption | null>(null);
+  const [categories, setCategories] = useState<SelectOption[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<SelectOption | null>(null);
   
   // For day planning
   const [selectedExhibitions, setSelectedExhibitions] = useState<string[]>([]);
 
-  // Safely get URL parameters after component mounts
+  // Effect to initialize state from URL and fetch exhibitions
   useEffect(() => {
+    let initialStartDate = formattedToday;
+    let initialEndDate = formattedDefaultEnd;
+    let initialUseRange = false;
+    let initialCityValue = '';
+    let initialCategoryValue = '';
+
     if (searchParams) {
-      // Use URL params or defaults
       const startDateParam = searchParams.get('startDate');
-      if (startDateParam) setStartDate(startDateParam);
-      
       const endDateParam = searchParams.get('endDate');
-      if (endDateParam) {
-        setEndDate(endDateParam);
-        setUseDateRange(true);
-      }
-      
       const cityParam = searchParams.get('city');
-      if (cityParam) setSelectedCity(cityParam);
-      
       const categoryParam = searchParams.get('category');
-      if (categoryParam) setSelectedCategory(categoryParam);
+
+      if (startDateParam) {
+        initialStartDate = startDateParam;
+      }
+      if (endDateParam) {
+        initialEndDate = endDateParam;
+        initialUseRange = true; // Assume range if endDate is present
+      }
+      if (cityParam) {
+        initialCityValue = cityParam;
+      }
+      if (categoryParam) {
+        initialCategoryValue = categoryParam;
+      }
     }
     
-    fetchExhibitions();
-  }, [searchParams]);
+    // Set initial state values
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+    setUseDateRange(initialUseRange);
+    
+    // Note: We set selectedCity/Category based on value later, 
+    // once the options (cities/categories) are fetched.
+    
+    fetchExhibitions(initialStartDate, initialEndDate, initialUseRange, initialCityValue, initialCategoryValue);
+
+  }, [searchParams]); // Only re-run if searchParams change
   
-  const fetchExhibitions = async () => {
+  const fetchExhibitions = async (currentStartDate: string, currentEndDate: string, currentUseRange: boolean, currentCityValue: string | null, currentCategoryValue: string | null) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Safely build search parameters
       const params = new URLSearchParams();
       
-      // Only access search params after being sure we're on the client
-      if (typeof window !== 'undefined') {
-        if (searchParams) {
-          // Use date parameters from URL if available
-          const urlStartDate = searchParams.get('startDate');
-          const urlEndDate = searchParams.get('endDate');
-          const urlCity = searchParams.get('city');
-          const urlCategory = searchParams.get('category');
-          
-          if (urlStartDate) params.append(urlEndDate ? 'startDate' : 'date', urlStartDate);
-          if (urlEndDate) params.append('endDate', urlEndDate);
-          if (urlCity) params.append('city', urlCity);
-          if (urlCategory) params.append('category', urlCategory);
-        } else {
-          // Use state values as fallback
-          if (useDateRange) {
-            params.append('startDate', startDate);
-            params.append('endDate', endDate);
-          } else {
-            params.append('date', startDate);
-          }
-          
-          if (selectedCity) params.append('city', selectedCity);
-          if (selectedCategory) params.append('category', selectedCategory);
-        }
-      
-        // Choose appropriate API endpoint based on whether using date range or single date
-        const endpoint = params.has('endDate') ? '/api/exhibitions' : '/api/exhibitions/date';
-        const response = await fetch(`${endpoint}?${params.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch exhibitions');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          setExhibitions(data.data);
-          
-          // Extract unique cities and categories for filters
-          if (data.meta && data.meta.filter_options) {
-            setCities(data.meta.filter_options.cities || []);
-            setCategories(data.meta.filter_options.categories || []);
-          }
-        } else {
-          throw new Error(data.error || 'Failed to fetch exhibitions');
-        }
+      // Always use the current state values passed to the function
+      if (currentUseRange) {
+        params.append('startDate', currentStartDate);
+        params.append('endDate', currentEndDate);
+      } else {
+        // When not using range, the API expects 'date'
+        params.append('date', currentStartDate); 
       }
+      
+      if (currentCityValue) params.append('city', currentCityValue);
+      if (currentCategoryValue) params.append('category', currentCategoryValue);
+      
+      // Choose appropriate API endpoint based on whether using date range or single date
+      const endpoint = currentUseRange ? '/api/exhibitions' : '/api/exhibitions/date';
+      
+      // Make sure we have a date parameter for the date endpoint
+      if (endpoint === '/api/exhibitions/date' && !params.has('date')) {
+         console.warn("API call to /api/exhibitions/date attempted without a date parameter. Using today's date.");
+         params.set('date', formattedToday); // Fallback to today if date somehow missing
+      }
+      
+      const apiUrl = `${endpoint}?${params.toString()}`;
+      console.log("Fetching exhibitions from:", apiUrl);
+
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+         const errorData = await response.json().catch(() => ({})); // Try to get error details
+         console.error("API Error:", response.status, errorData);
+         throw new Error(`Failed to fetch exhibitions: ${response.statusText} - ${errorData?.error || 'Unknown error'}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setExhibitions(data.data);
+        if (data.meta && data.meta.filter_options) {
+            // Map fetched options to react-select format
+            const cityOptions = (data.meta.filter_options.cities || []).map((city: string) => ({ value: city, label: city }));
+            const categoryOptions = (data.meta.filter_options.categories || []).map((cat: string) => ({ value: cat, label: cat }));
+            
+            setCities(cityOptions);
+            setCategories(categoryOptions);
+            
+            // Now set the selected value based on initial param, if options exist
+            setSelectedCity(cityOptions.find(opt => opt.value === currentCityValue) || null);
+            setSelectedCategory(categoryOptions.find(opt => opt.value === currentCategoryValue) || null);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to fetch exhibitions from API');
+      }
+      
     } catch (err: any) {
-      console.error('Error fetching exhibitions:', err);
+      console.error('Error in fetchExhibitions:', err);
       setError(err.message || 'Failed to load exhibitions');
+      setExhibitions([]); // Clear exhibitions on error
     } finally {
       setLoading(false);
     }
@@ -148,22 +178,24 @@ function DateSearchContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Update URL with search parameters
+    // Update URL with current state search parameters
     const params = new URLSearchParams();
     
     if (useDateRange) {
       params.set('startDate', startDate);
       params.set('endDate', endDate);
     } else {
-      params.set('startDate', startDate);
+      // If not using range, URL should reflect single date via startDate param
+      params.set('startDate', startDate); 
     }
     
-    if (selectedCity) params.set('city', selectedCity);
-    if (selectedCategory) params.set('category', selectedCategory);
+    if (selectedCity) params.set('city', selectedCity.value);
+    if (selectedCategory) params.set('category', selectedCategory.value);
     
     router.push(`/date-search?${params.toString()}`);
     
-    fetchExhibitions();
+    // Fetch exhibitions with current state
+    fetchExhibitions(startDate, endDate, useDateRange, selectedCity?.value || null, selectedCategory?.value || null);
   };
   
   const handleExhibitionSelection = (exhibitionId: string) => {
@@ -270,34 +302,34 @@ function DateSearchContent() {
                 <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                   City
                 </label>
-                <select
+                <Select<SelectOption>
                   id="city"
+                  instanceId="city-select"
+                  options={cities}
                   value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                >
-                  <option value="">All Cities</option>
-                  {cities.map((city, index) => (
-                    <option key={index} value={city}>{city}</option>
-                  ))}
-                </select>
+                  onChange={(selectedOption) => setSelectedCity(selectedOption)}
+                  isClearable={true}
+                  placeholder="Search or select a city..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                />
               </div>
               
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                   Category
                 </label>
-                <select
+                <Select<SelectOption>
                   id="category"
+                  instanceId="category-select"
+                  options={categories}
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((category, index) => (
-                    <option key={index} value={category}>{category}</option>
-                  ))}
-                </select>
+                  onChange={(selectedOption) => setSelectedCategory(selectedOption)}
+                  isClearable={true}
+                  placeholder="Search or select a category..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                />
               </div>
             </div>
             
@@ -318,8 +350,8 @@ function DateSearchContent() {
               {useDateRange 
                 ? `Exhibitions from ${formatDateForDisplay(startDate)} to ${formatDateForDisplay(endDate)}`
                 : `Exhibitions on ${formatDateForDisplay(startDate)}`}
-              {selectedCity && ` in ${selectedCity}`}
-              {selectedCategory && `, ${selectedCategory} category`}
+              {selectedCity && ` in ${selectedCity.label}`}
+              {selectedCategory && `, ${selectedCategory.label} category`}
             </h2>
           </div>
         )}

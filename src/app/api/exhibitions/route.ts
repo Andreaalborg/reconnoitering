@@ -1,60 +1,74 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
 
-export async function GET(request: Request) {
+// --- Define European Countries ---
+// Note: This list might need refinement based on specific definitions (e.g., including transcontinental countries)
+const EUROPEAN_COUNTRIES = [
+  "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria", 
+  "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland", "France", 
+  "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia", 
+  "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro", 
+  "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "Russia", // Consider if Russia should be included/partially included
+  "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", 
+  "Turkey", // Consider if Turkey should be included/partially included
+  "Ukraine", "United Kingdom", "UK", "Vatican City"
+  // Add or remove countries as needed
+];
+// Normalize UK variations
+const EUROPEAN_COUNTRIES_NORMALIZED = EUROPEAN_COUNTRIES.map(c => c.toLowerCase());
+
+export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
     const { searchParams } = new URL(request.url);
     
-    // Standard filtreringsparametere
-    const city = searchParams.get('city');
-    const country = searchParams.get('country');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const categoryFilter = searchParams.get('category');
-    const artist = searchParams.get('artist');
-    const searchText = searchParams.get('search');
-    const sort = searchParams.get('sort') || '-addedDate';
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = parseInt(searchParams.get('skip') || '0');
-    
-    // Bygg spørringsobjekt
-    const query: any = {};
-    
-    // Tekstsøk (full-tekst søk)
+    // Base query: Always filter for European countries initially
+    const query: any = {
+      'location.country': { $in: EUROPEAN_COUNTRIES } 
+    };
+
+    // Apply text search if present
+    const searchText = searchParams.get('q');
     if (searchText) {
       query.$text = { $search: searchText };
     }
     
-    // Lokasjonsfiltere
-    if (city) query['location.city'] = { $regex: city, $options: 'i' };
-    if (country) query['location.country'] = { $regex: country, $options: 'i' };
-    
-    // Datofiltere
-    if (startDate || endDate) {
-      query.$and = [];
-      
-      if (startDate) {
-        query.$and.push({ endDate: { $gte: new Date(startDate) } });
+    // Apply selected countries filter (overrides base Europe filter if present)
+    let selectedCountryValues: string[] = [];
+    const countriesParam = searchParams.get('countries');
+    if (countriesParam) {
+      selectedCountryValues = countriesParam.split(',').map(c => c.trim()).filter(Boolean);
+      if (selectedCountryValues.length > 0) {
+        const validSelectedCountries = selectedCountryValues.filter(c => 
+            EUROPEAN_COUNTRIES.some(ec => ec.toLowerCase() === c.toLowerCase()));
+        query['location.country'] = { $in: validSelectedCountries.length > 0 ? validSelectedCountries : [] };
       }
-      
-      if (endDate) {
-        query.$and.push({ startDate: { $lte: new Date(endDate) } });
-      }
+    } // If no countriesParam, the initial $in: EUROPEAN_COUNTRIES applies
+
+    // Apply selected cities filter 
+    const citiesParam = searchParams.get('cities');
+    if (citiesParam) {
+        const cityList = citiesParam.split(',').map(c => c.trim()).filter(Boolean);
+        if (cityList.length > 0) {
+            query['location.city'] = { $in: cityList.map(city => new RegExp(`^${city}$`, 'i')) };
+        }
     }
+
+    // Apply other filters (Category, Artist, Tag)
+    const category = searchParams.get('category');
+    if (category) { query.category = { $regex: new RegExp(`^${category}$`, 'i') }; }
+    const artist = searchParams.get('artist');
+    if (artist) { query.artists = { $regex: new RegExp(`^${artist}$`, 'i') }; }
+    const tag = searchParams.get('tag');
+    if (tag) { query.tags = { $regex: new RegExp(`^${tag}$`, 'i') }; }
     
-    // Kategori- og artistfiltere
-    if (categoryFilter) {
-      query.category = { $regex: categoryFilter, $options: 'i' };
-    }
-    
-    if (artist) {
-      query.artists = { $regex: artist, $options: 'i' };
-    }
-    
-    // Definer sorteringsalternativer
+    // Date range filter - Assuming this route doesn't handle date range like /date
+    // Remove date logic if not applicable here
+
+    // Sorting logic (adjust based on $text search)
+    const sort = searchParams.get('sort') || '-addedDate';
     let sortOption: any = {};
     
     // Hvis vi bruker tekstsøk, la tekstscore påvirke sorteringen
@@ -90,6 +104,10 @@ export async function GET(request: Request) {
       }
     }
     
+    // Pagination logic (remains the same)
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const skip = parseInt(searchParams.get('skip') || '0');
+    
     // Hent utstillinger
     const exhibitions = await Exhibition.find(query)
       .sort(sortOption)
@@ -98,10 +116,29 @@ export async function GET(request: Request) {
       
     const total = await Exhibition.countDocuments(query);
     
-    // Hent unike verdier for filterene (for søkesiden)
-    const uniqueCities = await Exhibition.distinct('location.city');
-    const uniqueCountries = await Exhibition.distinct('location.country');
-    const uniqueCategories = await Exhibition.distinct('category');
+    // --- Fetching Filter Options (Context-Aware) ---
+    
+    // Base query for fetching filter options (start with current filters)
+    const filterOptionQueryBase = { ...query };
+
+    // Fetch City options: Based on ALL current filters EXCEPT city itself
+    delete filterOptionQueryBase['location.city']; 
+    const uniqueCities = await Exhibition.distinct('location.city', filterOptionQueryBase);
+    
+    // Fetch Category options: Based on ALL current filters EXCEPT category
+    const categoryFilterQuery = { ...query }; // Re-clone original query
+    delete categoryFilterQuery.category;
+    const uniqueCategories = await Exhibition.distinct('category', categoryFilterQuery);
+
+    // Fetch Artist options: Based on ALL current filters EXCEPT artist
+    const artistFilterQuery = { ...query };
+    delete artistFilterQuery.artists;
+    const uniqueArtists = await Exhibition.distinct('artists', artistFilterQuery);
+
+    // Fetch Tag options: Based on ALL current filters EXCEPT tag
+    const tagFilterQuery = { ...query };
+    delete tagFilterQuery.tags;
+    const uniqueTags = await Exhibition.distinct('tags', tagFilterQuery);
     
     return NextResponse.json({ 
       success: true, 
@@ -109,9 +146,13 @@ export async function GET(request: Request) {
       meta: {
         total,
         filter_options: {
-          cities: uniqueCities,
-          countries: uniqueCountries,
-          categories: uniqueCategories.flat()
+          // Cities are now dynamic based on other filters (especially country)
+          cities: uniqueCities.sort(), 
+          // Countries: Always return the full static list for the frontend dropdown
+          countries: EUROPEAN_COUNTRIES, 
+          categories: Array.from(new Set(uniqueCategories.flat())).sort(),
+          artists: Array.from(new Set(uniqueArtists.flat())).sort(),
+          tags: Array.from(new Set(uniqueTags.flat())).sort()
         }
       }
     });
