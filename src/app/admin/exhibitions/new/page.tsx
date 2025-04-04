@@ -66,7 +66,7 @@ function AddExhibitionContent() {
   const [error, setError] = useState('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 59.9139, lng: 10.7522 }); // Default to Oslo
-  const const [mapMarkerPos, setMapMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapMarkerPos, setMapMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
   const [countryWarning, setCountryWarning] = useState<string>(''); // State for country warning
   
   // Effect to potentially set initial location name based on param
