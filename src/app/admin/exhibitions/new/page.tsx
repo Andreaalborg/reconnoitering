@@ -1,7 +1,7 @@
 // src/app/admin/exhibitions/new/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -21,13 +21,13 @@ const EUROPEAN_COUNTRIES_LOWER = [
     "turkey", "ukraine", "united kingdom", "uk", "vatican city"
 ];
 
-export default function AddExhibition() {
+function AddExhibitionContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Check if location was passed from update tracker
-  const locationFromParam = searchParams.get('location');
+  // Get location param *after* ensuring searchParams is available
+  const locationFromParam = searchParams ? searchParams.get('location') : null;
   
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -66,8 +66,16 @@ export default function AddExhibition() {
   const [error, setError] = useState('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 59.9139, lng: 10.7522 }); // Default to Oslo
-  const [mapMarkerPos, setMapMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
+  const const [mapMarkerPos, setMapMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
   const [countryWarning, setCountryWarning] = useState<string>(''); // State for country warning
+  
+  // Effect to potentially set initial location name based on param
+  useEffect(() => {
+      if (locationFromParam) {
+          setFormData(prev => ({ ...prev, location: { ...prev.location, name: locationFromParam }}));
+      }
+      // Ensure this only runs once after searchParams are potentially available
+  }, [locationFromParam]); 
   
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -831,5 +839,15 @@ export default function AddExhibition() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Default export: The Page component that wraps the client part in Suspense
+export default function AddExhibitionPage() {
+  // This part runs on the server initially, then hydrates on client
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-100 flex items-center justify-center text-xl">Loading Form...</div>}>
+      <AddExhibitionContent />
+    </Suspense>
   );
 }
