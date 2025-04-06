@@ -2,7 +2,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
@@ -38,6 +38,23 @@ interface SelectOption {
   label: string;
 }
 
+// --- European Countries List (Copied from exhibitions/page.tsx) ---
+const EUROPEAN_COUNTRIES = [
+  "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria", 
+  "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland", "France", 
+  "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia", 
+  "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro", 
+  "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "Russia", 
+  "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", 
+  "Turkey", "Ukraine", "United Kingdom", "UK", "Vatican City"
+].sort();
+
+const europeanCountryOptions: SelectOption[] = EUROPEAN_COUNTRIES.map(country => ({
+  value: country,
+  label: country
+}));
+// ------------------------------------------------------------------
+
 function DateSearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -56,182 +73,290 @@ function DateSearchContent() {
   const [endDate, setEndDate] = useState<string>(formattedDefaultEnd);
   const [useDateRange, setUseDateRange] = useState<boolean>(false);
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingExhibitions, setLoadingExhibitions] = useState<boolean>(true);
+  const [loadingOptions, setLoadingOptions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [cities, setCities] = useState<SelectOption[]>([]);
-  const [selectedCity, setSelectedCity] = useState<SelectOption | null>(null);
-  const [categories, setCategories] = useState<SelectOption[]>([]);
+  const [cityOptions, setCityOptions] = useState<SelectOption[]>([]);
+  const [selectedCities, setSelectedCities] = useState<SelectOption[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<SelectOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<SelectOption | null>(null);
+  const [artistOptions, setArtistOptions] = useState<SelectOption[]>([]);
+  const [selectedArtist, setSelectedArtist] = useState<SelectOption | null>(null);
   
   // For day planning
   const [selectedExhibitions, setSelectedExhibitions] = useState<string[]>([]);
 
-  // Effect to initialize state from URL and fetch exhibitions
+  // --- Function to Fetch Filter Options --- 
+  const fetchFilterOptions = useCallback(async () => {
+    setLoadingOptions(true);
+    try {
+      const params = new URLSearchParams();
+      // Build query based on CURRENT state for options
+      if (useDateRange) {
+        params.append('startDate', startDate);
+        params.append('endDate', endDate);
+      } else {
+        params.append('startDate', startDate);
+        params.append('endDate', startDate);
+      }
+      if (selectedCountries.length > 0) params.append('countries', selectedCountries.map(c => c.value).join(','));
+      if (selectedCities.length > 0) params.append('cities', selectedCities.map(c => c.value).join(','));
+      if (selectedCategory) params.append('category', selectedCategory.value);
+      if (selectedArtist) params.append('artist', selectedArtist.value);
+
+      // Call API just for options (ideally API supports this, otherwise we ignore data)
+      const apiUrl = `/api/exhibitions?${params.toString()}`;
+      console.log("Fetching FILTER OPTIONS from:", apiUrl);
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error('Failed to fetch filter options');
+      const data = await response.json();
+
+      if (data.success && data.meta?.filter_options) {
+        const options = data.meta.filter_options;
+        const newCityOptions = (options.cities || []).map((city: string) => ({ value: city, label: city }));
+        const newCategoryOptions = (options.categories || []).map((cat: string) => ({ value: cat, label: cat }));
+        const newArtistOptions = (options.artists || []).map((art: string) => ({ value: art, label: art }));
+
+        setCityOptions(newCityOptions);
+        setCategoryOptions(newCategoryOptions);
+        setArtistOptions(newArtistOptions);
+
+        // --- Validate and potentially clear existing selections (Smarter Check) --- 
+        setSelectedCities(prev => {
+            const validSelected = prev.filter(selected => newCityOptions.some(opt => opt.value === selected.value));
+            // Only update if the array content actually changed (simple length/value check)
+            if (validSelected.length !== prev.length || !validSelected.every((v, i) => v.value === prev[i]?.value)) {
+                return validSelected;
+            }
+            return prev; // Keep previous state reference if no change
+        });
+        setSelectedCategory(prev => {
+            const isValid = newCategoryOptions.some(opt => opt.value === prev?.value);
+            if (isValid) return prev; // Keep if valid
+            if (!isValid && prev !== null) return null; // Clear if invalid and was not already null
+            return prev; // Keep null if it was already null
+        });
+         setSelectedArtist(prev => {
+            const isValid = newArtistOptions.some(opt => opt.value === prev?.value);
+            if (isValid) return prev; // Keep if valid
+            if (!isValid && prev !== null) return null; // Clear if invalid and was not already null
+            return prev; // Keep null if it was already null
+        });
+      } else {
+        throw new Error(data.error || 'Failed to parse filter options');
+      }
+    } catch (err) {
+      console.error("Error fetching filter options:", err);
+      // Don't set main error state, maybe a specific options error?
+      // Reset options to empty on error?
+      setCityOptions([]);
+      setCategoryOptions([]);
+      setArtistOptions([]);
+    } finally {
+      setLoadingOptions(false);
+    }
+  }, [startDate, endDate, useDateRange, selectedCountries, selectedCities, selectedCategory, selectedArtist]); // Dependencies for fetching options
+
+  // --- Function to Fetch Actual Exhibitions --- 
+  const fetchExhibitionResults = useCallback(async () => {
+    setLoadingExhibitions(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      // Build query based on CURRENT state for results
+      if (useDateRange) {
+        params.append('startDate', startDate);
+        params.append('endDate', endDate);
+      } else {
+        params.append('startDate', startDate);
+        params.append('endDate', startDate);
+      }
+      if (selectedCountries.length > 0) params.append('countries', selectedCountries.map(c => c.value).join(','));
+      if (selectedCities.length > 0) params.append('cities', selectedCities.map(c => c.value).join(','));
+      if (selectedCategory) params.append('category', selectedCategory.value);
+      if (selectedArtist) params.append('artist', selectedArtist.value);
+
+      const apiUrl = `/api/exhibitions?${params.toString()}`;
+      console.log("Fetching EXHIBITION RESULTS from:", apiUrl);
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to fetch exhibitions: ${response.statusText} - ${errorData?.error || 'Unknown error'}`);
+      }
+      const data = await response.json();
+      if (data.success) {
+        setExhibitions(data.data);
+        // We can optionally update options here too, but fetchFilterOptions is primary
+      } else {
+        throw new Error(data.error || 'Failed to fetch exhibitions from API');
+      }
+    } catch (err: any) {
+      console.error('Error fetching exhibition results:', err);
+      setError(err.message || 'Failed to load exhibitions');
+      setExhibitions([]);
+    } finally {
+      setLoadingExhibitions(false);
+    }
+  }, [startDate, endDate, useDateRange, selectedCountries, selectedCities, selectedCategory, selectedArtist]); // Dependencies for fetching results
+
+  // --- Effects --- 
+
+  // Initial load: Set state from URL params, then fetch options and results
   useEffect(() => {
     let initialStartDate = formattedToday;
     let initialEndDate = formattedDefaultEnd;
     let initialUseRange = false;
-    let initialCityValue = '';
+    let initialCityValues: string[] = [];
+    let initialCountryValues: string[] = [];
     let initialCategoryValue = '';
+    let initialArtistValue = '';
 
     if (searchParams) {
       const startDateParam = searchParams.get('startDate');
       const endDateParam = searchParams.get('endDate');
-      const cityParam = searchParams.get('city');
+      const citiesParam = searchParams.get('cities'); 
+      const countriesParam = searchParams.get('countries'); 
       const categoryParam = searchParams.get('category');
+      const artistParam = searchParams.get('artist'); 
 
-      if (startDateParam) {
-        initialStartDate = startDateParam;
-      }
+      if (startDateParam) initialStartDate = startDateParam;
       if (endDateParam) {
         initialEndDate = endDateParam;
-        initialUseRange = true; // Assume range if endDate is present
+        initialUseRange = true; 
       }
-      if (cityParam) {
-        initialCityValue = cityParam;
-      }
-      if (categoryParam) {
-        initialCategoryValue = categoryParam;
-      }
+      if (citiesParam) initialCityValues = citiesParam.split(',').filter(Boolean);
+      if (countriesParam) initialCountryValues = countriesParam.split(',').filter(Boolean);
+      if (categoryParam) initialCategoryValue = categoryParam;
+      if (artistParam) initialArtistValue = artistParam; 
     }
     
-    // Set initial state values
+    // Set initial state values (basic ones)
     setStartDate(initialStartDate);
     setEndDate(initialEndDate);
     setUseDateRange(initialUseRange);
     
-    // Note: We set selectedCity/Category based on value later, 
-    // once the options (cities/categories) are fetched.
+    // Set initial country selection (static options)
+    const initialCountries = europeanCountryOptions.filter(opt => initialCountryValues.includes(opt.value));
+    setSelectedCountries(initialCountries);
     
-    fetchExhibitions(initialStartDate, initialEndDate, initialUseRange, initialCityValue, initialCategoryValue);
+    // Set initial selections for dropdowns that depend on fetched options
+    // We set these temporarily, fetchFilterOptions will validate them
+    setSelectedCategory(initialCategoryValue ? { value: initialCategoryValue, label: initialCategoryValue } : null);
+    setSelectedArtist(initialArtistValue ? { value: initialArtistValue, label: initialArtistValue } : null);
+    setSelectedCities(initialCityValues.map(v => ({ value: v, label: v })));
 
-  }, [searchParams]); // Only re-run if searchParams change
-  
-  const fetchExhibitions = async (currentStartDate: string, currentEndDate: string, currentUseRange: boolean, currentCityValue: string | null, currentCategoryValue: string | null) => {
-    setLoading(true);
-    setError(null);
+    // Fetch initial options based on URL state
+    fetchFilterOptions(); // This will validate/correct selections
+    // Fetch initial results based on URL state
+    fetchExhibitionResults();
+
+  }, [searchParams]); // IMPORTANT: Only run on searchParams change (initial load / back/forward nav)
+
+  // Fetch OPTIONS when relevant filters change
+  useEffect(() => {
+    // Avoid fetching on initial render if searchParams effect already did
+    if (loadingExhibitions) return; 
     
-    try {
-      const params = new URLSearchParams();
-      
-      // Always use the current state values passed to the function
-      if (currentUseRange) {
-        params.append('startDate', currentStartDate);
-        params.append('endDate', currentEndDate);
-      } else {
-        // When not using range, the API expects 'date'
-        params.append('date', currentStartDate); 
-      }
-      
-      if (currentCityValue) params.append('city', currentCityValue);
-      if (currentCategoryValue) params.append('category', currentCategoryValue);
-      
-      // Choose appropriate API endpoint based on whether using date range or single date
-      const endpoint = currentUseRange ? '/api/exhibitions' : '/api/exhibitions/date';
-      
-      // Make sure we have a date parameter for the date endpoint
-      if (endpoint === '/api/exhibitions/date' && !params.has('date')) {
-         console.warn("API call to /api/exhibitions/date attempted without a date parameter. Using today's date.");
-         params.set('date', formattedToday); // Fallback to today if date somehow missing
-      }
-      
-      const apiUrl = `${endpoint}?${params.toString()}`;
-      console.log("Fetching exhibitions from:", apiUrl);
+    fetchFilterOptions();
+  // Only fetch options primarily based on Date and Country changes
+  // Changes in City/Category/Artist shouldn't refetch the options list itself in this simplified model
+  }, [startDate, endDate, useDateRange, selectedCountries, fetchFilterOptions]); 
 
-      const response = await fetch(apiUrl);
-      
-      if (!response.ok) {
-         const errorData = await response.json().catch(() => ({})); // Try to get error details
-         console.error("API Error:", response.status, errorData);
-         throw new Error(`Failed to fetch exhibitions: ${response.statusText} - ${errorData?.error || 'Unknown error'}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setExhibitions(data.data);
-        if (data.meta && data.meta.filter_options) {
-            // Map fetched options to react-select format
-            const cityOptions = (data.meta.filter_options.cities || []).map((city: string) => ({ value: city, label: city }));
-            const categoryOptions = (data.meta.filter_options.categories || []).map((cat: string) => ({ value: cat, label: cat }));
-            
-            setCities(cityOptions);
-            setCategories(categoryOptions);
-            
-            // Now set the selected value based on initial param, if options exist
-            setSelectedCity(cityOptions.find(opt => opt.value === currentCityValue) || null);
-            setSelectedCategory(categoryOptions.find(opt => opt.value === currentCategoryValue) || null);
-        }
-      } else {
-        throw new Error(data.error || 'Failed to fetch exhibitions from API');
-      }
-      
-    } catch (err: any) {
-      console.error('Error in fetchExhibitions:', err);
-      setError(err.message || 'Failed to load exhibitions');
-      setExhibitions([]); // Clear exhibitions on error
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  // --- Handlers --- 
+
+  // Handle Submit Button: Fetches main results
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Update URL with current state search parameters
     const params = new URLSearchParams();
-    
     if (useDateRange) {
       params.set('startDate', startDate);
       params.set('endDate', endDate);
     } else {
-      // If not using range, URL should reflect single date via startDate param
-      params.set('startDate', startDate); 
+      params.set('startDate', startDate);
     }
-    
-    if (selectedCity) params.set('city', selectedCity.value);
+    if (selectedCities.length > 0) params.set('cities', selectedCities.map(c => c.value).join(','));
+    if (selectedCountries.length > 0) params.set('countries', selectedCountries.map(c => c.value).join(','));
     if (selectedCategory) params.set('category', selectedCategory.value);
+    if (selectedArtist) params.set('artist', selectedArtist.value);
     
+    // Update URL
     router.push(`/date-search?${params.toString()}`);
     
-    // Fetch exhibitions with current state
-    fetchExhibitions(startDate, endDate, useDateRange, selectedCity?.value || null, selectedCategory?.value || null);
+    // Fetch results
+    fetchExhibitionResults();
   };
   
-  const handleExhibitionSelection = (exhibitionId: string) => {
-    setSelectedExhibitions(prev => {
-      // Check if already selected
-      if (prev.includes(exhibitionId)) {
-        // Remove from selection
-        return prev.filter(id => id !== exhibitionId);
-      } else {
-        // Add to selection
-        return [...prev, exhibitionId];
+  // Multi-select handler (Country, City)
+  const handleMultiSelectChange = (selectedOptions: readonly SelectOption[] | null, filterType: 'country' | 'city') => {
+      const optionsArray = selectedOptions ? Array.from(selectedOptions) : [];
+      if (filterType === 'country') {
+          setSelectedCountries(optionsArray);
+          // When country changes, clear city selection as options will refresh
+          setSelectedCities([]); 
+      } else if (filterType === 'city') {
+          setSelectedCities(optionsArray);
       }
-    });
+      // Options will be fetched via the useEffect hook watching these states
+  };
+
+  // Single-select handler (Category, Artist)
+  const handleSingleSelectChange = (selectedOption: SelectOption | null, filterType: 'category' | 'artist') => {
+      if (filterType === 'category') {
+          setSelectedCategory(selectedOption);
+      } else if (filterType === 'artist') {
+          setSelectedArtist(selectedOption);
+      }
+       // Options will be fetched via the useEffect hook watching category state
+       // Artist change doesn't require fetching options for other fields
+  };
+
+  // Clear Filters
+  const clearFilters = () => {
+      // Reset state to defaults
+      const today = new Date().toISOString().split('T')[0];
+      const defaultEnd = new Date();
+      defaultEnd.setDate(new Date().getDate() + 7);
+      const formattedDefaultEnd = defaultEnd.toISOString().split('T')[0];
+      
+      setStartDate(today);
+      setEndDate(formattedDefaultEnd);
+      setUseDateRange(false);
+      setSelectedCities([]);
+      setSelectedCountries([]);
+      setSelectedCategory(null);
+      setSelectedArtist(null);
+      setError(null);
+      
+      // Clear URL
+      router.push('/date-search'); 
+      
+      // Fetch default options and results
+      fetchFilterOptions(); 
+      fetchExhibitionResults(); 
+  };
+
+  // Other functions (handleExhibitionSelection, startPlanningDay, formatDateForDisplay) remain the same
+  const handleExhibitionSelection = (exhibitionId: string) => {
+    setSelectedExhibitions(prev => 
+      prev.includes(exhibitionId) ? prev.filter(id => id !== exhibitionId) : [...prev, exhibitionId]
+    );
   };
   
   const startPlanningDay = () => {
-    // Create a URL parameter with selected exhibition IDs
-    const planStartDate = useDateRange ? startDate : startDate;
+    const planStartDate = startDate; 
     router.push(`/day-planner?date=${planStartDate}&exhibitions=${selectedExhibitions.join(',')}`);
   };
   
-  // Format a date for display
   const formatDateForDisplay = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
   
   return (
     <>
       <Header />
-      
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Find Exhibitions by Date</h1>
@@ -250,10 +375,10 @@ function DateSearchContent() {
               </label>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {useDateRange ? (
                 <>
-                  <div>
+                  <div className="md:col-span-1">
                     <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
                       Start Date
                     </label>
@@ -267,7 +392,7 @@ function DateSearchContent() {
                     />
                   </div>
                   
-                  <div>
+                  <div className="md:col-span-1">
                     <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
                       End Date
                     </label>
@@ -283,7 +408,7 @@ function DateSearchContent() {
                   </div>
                 </>
               ) : (
-                <div>
+                <div className="md:col-span-2 lg:col-span-1">
                   <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
                     Date
                   </label>
@@ -298,47 +423,92 @@ function DateSearchContent() {
                 </div>
               )}
               
-              <div>
-                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                  City
-                </label>
-                <Select<SelectOption>
-                  id="city"
-                  instanceId="city-select"
-                  options={cities}
-                  value={selectedCity}
-                  onChange={(selectedOption) => setSelectedCity(selectedOption)}
-                  isClearable={true}
-                  placeholder="Search or select a city..."
+              <div className="lg:col-span-1">
+                <label htmlFor="countries-select" className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                <Select<SelectOption, true>
+                  id="countries-select"
+                  instanceId="countries-select-instance"
+                  isMulti
+                  options={europeanCountryOptions}
+                  value={selectedCountries}
+                  onChange={(options) => handleMultiSelectChange(options, 'country')}
+                  placeholder="Select countries..."
                   className="react-select-container"
                   classNamePrefix="react-select"
+                  closeMenuOnSelect={false}
+                  isDisabled={loadingOptions}
                 />
               </div>
               
-              <div>
+              <div className="lg:col-span-1">
+                <label htmlFor="cities-select" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <Select<SelectOption, true>
+                  id="cities-select"
+                  instanceId="cities-select-instance"
+                  isMulti
+                  options={cityOptions}
+                  value={selectedCities}
+                  onChange={(options) => handleMultiSelectChange(options, 'city')}
+                  isClearable={true}
+                  placeholder="Select cities..."
+                  noOptionsMessage={() => 'No cities found for selection'}
+                  isDisabled={loadingOptions || selectedCountries.length === 0}
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  closeMenuOnSelect={false}
+                />
+              </div>
+              
+              <div className="lg:col-span-1">
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                   Category
                 </label>
                 <Select<SelectOption>
                   id="category"
                   instanceId="category-select"
-                  options={categories}
+                  options={categoryOptions}
                   value={selectedCategory}
-                  onChange={(selectedOption) => setSelectedCategory(selectedOption)}
+                  onChange={(option) => handleSingleSelectChange(option, 'category')}
                   isClearable={true}
-                  placeholder="Search or select a category..."
+                  placeholder="Select a category..."
                   className="react-select-container"
                   classNamePrefix="react-select"
+                  isDisabled={loadingOptions}
+                />
+              </div>
+
+              <div className="lg:col-span-1">
+                <label htmlFor="artist" className="block text-sm font-medium text-gray-700 mb-1">
+                  Artist
+                </label>
+                <Select<SelectOption>
+                  id="artist"
+                  instanceId="artist-select"
+                  options={artistOptions}
+                  value={selectedArtist}
+                  onChange={(option) => handleSingleSelectChange(option, 'artist')}
+                  isClearable={true}
+                  placeholder="Select an artist..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  isDisabled={loadingOptions}
                 />
               </div>
             </div>
             
-            <div className="flex justify-end">
+            <div className="flex justify-end space-x-3">
+              <button 
+                type="button" 
+                onClick={clearFilters} 
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Clear Filters
+              </button>
               <button 
                 type="submit"
                 className="bg-rose-500 hover:bg-rose-600 text-white font-medium py-2 px-6 rounded transition-colors"
               >
-                Search
+                Search Exhibitions
               </button>
             </div>
           </form>
@@ -350,13 +520,14 @@ function DateSearchContent() {
               {useDateRange 
                 ? `Exhibitions from ${formatDateForDisplay(startDate)} to ${formatDateForDisplay(endDate)}`
                 : `Exhibitions on ${formatDateForDisplay(startDate)}`}
-              {selectedCity && ` in ${selectedCity.label}`}
+              {selectedCountries.length > 0 && ` in ${selectedCountries.map(c => c.label).join(', ')}`}
+              {selectedCities.length > 0 && ` (${selectedCities.map(c => c.label).join(', ')})`}
               {selectedCategory && `, ${selectedCategory.label} category`}
+              {selectedArtist && ` by ${selectedArtist.label}`}
             </h2>
           </div>
         )}
         
-        {/* Display selection bar when exhibitions are selected */}
         {selectedExhibitions.length > 0 && (
           <div className="sticky top-20 z-10 bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 shadow-md">
             <div className="flex flex-col md:flex-row justify-between items-center">
@@ -384,7 +555,7 @@ function DateSearchContent() {
           </div>
         )}
         
-        {loading ? (
+        {loadingExhibitions ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
           </div>
@@ -409,7 +580,6 @@ function DateSearchContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {exhibitions.map((exhibition) => (
               <div key={exhibition._id} className="relative">
-                {/* Selection button */}
                 <div className="absolute top-3 right-3 z-20">
                   <button
                     type="button"
@@ -445,7 +615,6 @@ function DateSearchContent() {
                   endDate={exhibition.endDate}
                 />
                 
-                {/* Closed day badge if provided */}
                 {exhibition.closedDay && (
                   <div className="absolute bottom-3 left-3 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
                     Closed on {exhibition.closedDay}s

@@ -240,6 +240,9 @@ const Header = () => {
                         <Link href="/admin/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                           Admin Dashboard
                         </Link>
+                        <Link href="/admin/venues" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                          Venues
+                        </Link>
                         <Link href="/admin/analytics" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                           Analytics
                         </Link>

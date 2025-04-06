@@ -36,27 +36,27 @@ interface GoogleMapProps {
 
 export default function GoogleMap({ 
   apiKey,
-  center = { lat: 48.8566, lng: 2.3522 },
-  zoom = 13, // Adjust default zoom if needed
+  center = { lat: 59.9139, lng: 10.7522 }, // Default center Oslo
+  zoom = 13,
   markers = [],
-  mainMarker, // New prop
-  isMainMarkerDraggable = false, // Default to not draggable
+  mainMarker,
+  isMainMarkerDraggable = false,
   onMainMarkerDragEnd,
   height = '500px',
-  onClick, // New prop
+  onClick,
   onDragEnd,
   showSearchBox = false,
   onPlaceSelected,
-  polylines = [], // Default to empty array
+  polylines = [],
 }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const markerRefs = useRef<{ [key: string]: google.maps.Marker }>({});
-  const mainMarkerRef = useRef<google.maps.Marker | null>(null); // Ref for the main marker
+  const mainMarkerRef = useRef<google.maps.Marker | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const polylineRefs = useRef<google.maps.Polyline[]>([]); // Ref to store map polyline objects
+  const polylineRefs = useRef<google.maps.Polyline[]>([]);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null); // Ny ref for Autocomplete widget
 
   // Function to draw polylines
   const drawPolylines = useCallback((map: google.maps.Map | null) => {
@@ -112,8 +112,10 @@ export default function GoogleMap({
         `;
 
         marker.addListener('click', () => {
-            infoWindowRef.current!.setContent(content);
-            infoWindowRef.current!.open(map, marker);
+            if (infoWindowRef.current) { // Check if infoWindowRef.current exists
+                infoWindowRef.current.setContent(content);
+                infoWindowRef.current.open(map, marker);
+            }
         });
     }
   }, []); // Removed infoWindowRef from dependencies as it's stable after init
@@ -152,164 +154,168 @@ export default function GoogleMap({
       }
   }, [mainMarker, isMainMarkerDraggable, onMainMarkerDragEnd]);
 
-  // Initialize the map
+  // Initialize map
   const initializeMap = useCallback(async () => {
-    if (!mapRef.current || mapInstanceRef.current) return; // Prevent re-initialization
-
-    const loader = new Loader({
-      apiKey,
-      version: 'weekly',
-      libraries: ['places', 'geometry', 'geocoding'] // <<< Ensure all needed libs are here
-    });
+    if (!mapRef.current || mapInstanceRef.current) return; // Exit if no div or map already exists
 
     try {
+      const loader = new Loader({
+        apiKey,
+        version: 'weekly',
+        libraries: ['places', 'geometry', 'geocoding'] // Added geocoding back for consistency
+      });
+
       const google = await loader.load();
+      console.log("Google Maps API loaded.");
       
-      const mapOptions: google.maps.MapOptions = {
+      // --- Initialize map --- 
+      if (!mapRef.current) {
+        console.error("mapRef.current became null before map initialization!");
+        return; 
+      }
+      
+      // Add another check right before instantiation
+      if (!mapRef.current) {
+        console.error("mapRef.current became null JUST before new google.maps.Map()!");
+        return;
+      }
+
+      const map = new google.maps.Map(mapRef.current, {
         center,
         zoom,
         mapTypeControl: true,
-        streetViewControl: false, // Usually less relevant for route maps
+        streetViewControl: true,
         fullscreenControl: true,
-        zoomControl: true,
-        styles: [
-           // Optional: simplify map styles
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }]
-          },
-          {
-            featureType: 'transit',
-            elementType: 'labels.icon',
-            stylers: [{ visibility: 'off' }]
-          }
-        ]
-      };
-
-      const map = new google.maps.Map(mapRef.current, mapOptions);
+      });
       mapInstanceRef.current = map;
+      
+      // Initialize InfoWindow once
       infoWindowRef.current = new google.maps.InfoWindow();
 
-      // Setup click handler - CALLS the onClick prop if provided
-      if (onClick) {
-        map.addListener('click', (event: google.maps.MapMouseEvent) => {
-          const position = event.latLng;
-          if (position && onClick) {
-            onClick({ lat: position.lat(), lng: position.lng() });
+      // --- Setup Autocomplete Search Box (New approach) --- 
+      if (showSearchBox && searchInputRef.current && onPlaceSelected) {
+        const autocomplete = new google.maps.places.Autocomplete(searchInputRef.current, {
+            fields: ["place_id", "geometry", "name", "formatted_address"], // Specify needed fields
+            types: ['geocode', 'establishment'], // Optional: restrict types
+            componentRestrictions: { country: "no" }, // Restrict to Norway
+        });
+        autocompleteRef.current = autocomplete;
+        
+        // Bind Autocomplete results to the map's viewport
+        autocomplete.bindTo("bounds", map);
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          if (place.geometry && place.geometry.location) {
+              map.setCenter(place.geometry.location);
+              map.setZoom(15); // Zoom in on selected place
+              onPlaceSelected(place); // Call the callback with the full place details
+          } else {
+              console.log("Autocomplete place selected without geometry:", place.name);
+              // Optionally handle this, e.g., show a message
           }
         });
       }
 
-      // Setup drag end handler
+      // --- Add Listeners --- 
+      if (onClick) {
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (e.latLng) {
+            onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          }
+        });
+      }
       if (onDragEnd) {
         map.addListener('dragend', () => {
-          const mapCenter = map.getCenter();
-          if (mapCenter && onDragEnd) {
-            onDragEnd({
-              lat: mapCenter.lat(),
-              lng: mapCenter.lng()
-            });
+          const centerPos = map.getCenter();
+          if (centerPos) {
+            onDragEnd({ lat: centerPos.lat(), lng: centerPos.lng() });
           }
         });
       }
 
-      // Initialize search box if needed
-      if (showSearchBox && searchInputRef.current) {
-        const searchBox = new google.maps.places.SearchBox(searchInputRef.current);
-        searchBoxRef.current = searchBox;
-
-        map.controls[google.maps.ControlPosition.TOP_CENTER].push(searchInputRef.current);
-
-        // Listen for the event fired when the user selects a prediction
-        searchBox.addListener('places_changed', () => {
-          const places = searchBox.getPlaces();
-          if (places && places.length > 0) {
-            // For each place, get the icon, name and location
-            const bounds = new google.maps.LatLngBounds();
-            places.forEach(place => {
-              if (!place.geometry || !place.geometry.location) return;
-
-              if (onPlaceSelected) {
-                onPlaceSelected(place);
-              }
-
-              if (place.geometry.viewport) {
-                // Only geocodes have viewport
-                bounds.union(place.geometry.viewport);
-              } else {
-                bounds.extend(place.geometry.location);
-              }
-            });
-            map.fitBounds(bounds);
-          }
-        });
-      }
-
-      // Draw initial standard markers, main marker, and polylines
-      markers.forEach(markerData => addMarker(markerData, map));
-      updateMainMarker(map); // Draw/update the main marker
+      // --- Initial drawing --- 
       drawPolylines(map);
+      markers.forEach(marker => addMarker(marker, map));
+      if (mainMarker) {
+        updateMainMarker(map);
+      }
 
     } catch (error) {
-      console.error('Error loading Google Maps:', error);
+      console.error('Error initializing map:', error);
     }
-  }, [apiKey, center, zoom, markers, onClick, onDragEnd, showSearchBox, onPlaceSelected, addMarker, updateMainMarker, drawPolylines]);
+  // Update dependencies: remove outdated refs, keep necessary state/props
+  }, [apiKey, center, zoom, onClick, onDragEnd, showSearchBox, onPlaceSelected, drawPolylines, addMarker, updateMainMarker, mainMarker, markers]); // Added marker/mainMarker to re-init if they change drastically at start?
 
   // Update markers dynamically
   useEffect(() => {
-    // Clear existing markers before adding new ones
+    if (!mapInstanceRef.current) return; // Ensure map exists
     Object.values(markerRefs.current).forEach(marker => marker.setMap(null));
     markerRefs.current = {};
-    // Add new markers
     markers.forEach(markerData => addMarker(markerData, mapInstanceRef.current));
-  }, [markers, addMarker]); // Rerun only when markers array or addMarker changes
+  }, [markers, addMarker]);
 
   // Update polylines dynamically
   useEffect(() => {
+    if (!mapInstanceRef.current) return;
       drawPolylines(mapInstanceRef.current);
-  }, [polylines, drawPolylines]); // Rerun only when polylines array or drawPolylines changes
+  }, [polylines, drawPolylines]);
 
   // Update main marker dynamically
   useEffect(() => {
+    if (!mapInstanceRef.current) return;
       updateMainMarker(mapInstanceRef.current);
-  }, [mainMarker, updateMainMarker]); // Rerun when mainMarker data changes
+  }, [mainMarker, updateMainMarker]);
 
   // Initialize map on component mount
   useEffect(() => {
-    initializeMap();
+    if (!mapInstanceRef.current) { // Only initialize if map doesn't exist yet
+        initializeMap();
+    }
     // Cleanup function
     return () => {
-      // Clear markers
-      Object.values(markerRefs.current).forEach(marker => {
-        marker.setMap(null);
-      });
+      // Do NOT destroy the map instance here if using Fast Refresh/HMR
+      // Just clean up listeners and overlays
+      
+      // Check if google object and necessary sub-properties exist before clearing listeners
+      if (window.google && window.google.maps && window.google.maps.event) {
+          autocompleteRef.current?.unbind("bounds"); // Unbind autocomplete
+          google.maps.event.clearInstanceListeners(autocompleteRef.current); // Clear listeners
+          google.maps.event.clearInstanceListeners(mapInstanceRef.current); // Clear map listeners
+      } else {
+          console.warn("Google Maps API not fully available during cleanup, skipping listener removal.");
+      }
+      
+      Object.values(markerRefs.current).forEach(marker => marker.setMap(null));
       markerRefs.current = {};
-      // Clear polylines
       polylineRefs.current.forEach(p => p.setMap(null));
       polylineRefs.current = [];
-      // Close info window
-      infoWindowRef.current?.close();
-      // Note: We don't nullify mapInstanceRef here as it might cause issues with fast refresh
-      // Cleanup main marker
       mainMarkerRef.current?.setMap(null);
       mainMarkerRef.current = null;
+      infoWindowRef.current?.close();
     };
-  }, [initializeMap]);
+  }, [initializeMap]); // Run only when initializeMap function reference changes
+
+  // Re-center map when center prop changes EXTERNALLY (e.g., from parent page)
+  useEffect(() => {
+    if (mapInstanceRef.current && center) {
+      mapInstanceRef.current.setCenter(center);
+    }
+  }, [center]); // Depend only on the center prop
 
   return (
-    <div className="relative w-full" style={{ height }}>
+    <div className="relative" style={{ height }}>
       {showSearchBox && (
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="Søk etter sted..."
-          className="absolute top-4 left-3 z-10 w-72 md:w-96 px-4 py-2 rounded-md border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        />
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
+          <input
+            ref={searchInputRef} // Use the ref for the Autocomplete widget
+            type="text"
+            placeholder="Search for a place or address..."
+            className="w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+          />
+        </div>
       )}
-      <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden bg-gray-200" />
-      
-      {/* Optional: Add a loading indicator or message if map isn't ready? */}
+      <div ref={mapRef} className="w-full h-full rounded-lg" />
     </div>
   );
 }

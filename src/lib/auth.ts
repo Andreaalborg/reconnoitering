@@ -1,7 +1,23 @@
-import CredentialsProvider from 'next-auth/providers/credentials';
-import dbConnect from '@/lib/mongodb';
-import User from '@/models/User';
 import { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { compare } from 'bcryptjs';
+import dbConnect from './mongodb';
+import User from '@/models/User';
+
+// Legg til type for session
+declare module 'next-auth' {
+  interface User {
+    role?: string;
+  }
+  interface Session {
+    user?: {
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: string;
+    };
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -23,18 +39,19 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         
-        // For enkel test - vi kan bruke bcrypt senere for sikkerhet
-        if (credentials.password === user.password) {
-          return {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            image: user.image, // Make sure to include image in the token
-          };
+        const isValid = await compare(credentials.password, user.password);
+        
+        if (!isValid) {
+          return null;
         }
         
-        return null;
+        return {
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          image: user.image,
+        };
       }
     })
   ],
@@ -43,17 +60,15 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.image = user.image; // Add image to token
+        token.image = user.image;
       }
       
-      // Handle updates when the session is modified
       if (trigger === "update" && session) {
         if (session.user.name) token.name = session.user.name;
-        if (session.user.image) token.picture = session.user.image; // NextAuth uses 'picture' for images
+        if (session.user.image) token.picture = session.user.image;
       }
       
       return token;
@@ -62,7 +77,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
-        session.user.image = token.picture || token.image; // Use either 'picture' or 'image'
+        session.user.image = token.picture || token.image;
       }
       return session;
     }
@@ -72,4 +87,4 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 dager
   },
-};
+}; 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
+import Venue from '@/models/Venue';
+import mongoose from 'mongoose';
 
 export async function GET(
   request: NextRequest,
@@ -13,11 +15,16 @@ export async function GET(
     
     console.log(`Fetching exhibition with ID: ${id}`);
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Exhibition ID missing' }, { status: 400 });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: 'Invalid ID format' }, { status: 400 });
     }
 
-    const exhibition = await Exhibition.findById(id);
+    const exhibition = await Exhibition.findById(id)
+      .populate<{ venue: typeof Venue }>({
+        path: 'venue', 
+        select: 'name city country address websiteUrl coordinates'
+      })
+      .lean();
     
     if (!exhibition) {
       return NextResponse.json(
@@ -27,10 +34,10 @@ export async function GET(
     }
     
     return NextResponse.json({ success: true, data: exhibition });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching exhibition:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch exhibition' },
+      { success: false, error: 'Server error fetching exhibition' },
       { status: 500 }
     );
   }

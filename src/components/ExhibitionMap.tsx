@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { useRef, useEffect, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import Link from 'next/link';
+
+// Sett mapbox token fra miljøvariable
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 interface Exhibition {
   _id: string;
@@ -16,28 +20,12 @@ interface Exhibition {
       lng: number;
     };
   };
-  closedDay?: string;
 }
 
-interface ExhibitionMapProps {
-  exhibitions: Exhibition[];
-  onLocationSelect?: (location: { lat: number; lng: number }) => void;
-  showSearchBox?: boolean;
-  height?: string;
-}
-
-export default function ExhibitionMap({ 
-  exhibitions,
-  onLocationSelect,
-  showSearchBox = false,
-  height = '500px'
-}: ExhibitionMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+export default function ExhibitionMap({ exhibitions }: { exhibitions: Exhibition[] }) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Filtrer ut utstillinger uten koordinater
   const validExhibitions = exhibitions.filter(ex => 
@@ -45,11 +33,11 @@ export default function ExhibitionMap({
     ex.location.coordinates.lat && 
     ex.location.coordinates.lng
   );
-
-  // Beregn senterpunkt for kartet
-  const getMapCenter = useCallback(() => {
+  
+  // Beregn senterpunkt for kartet (gjennomsnitt av alle koordinater)
+  const getMapCenter = () => {
     if (validExhibitions.length === 0) {
-      return { lat: 48.8566, lng: 2.3522 }; // Default til Paris
+      return { lng: 0, lat: 0 }; // Default til verdenssentrum
     }
     
     const sumLat = validExhibitions.reduce((sum, ex) => 
@@ -61,155 +49,111 @@ export default function ExhibitionMap({
       lat: sumLat / validExhibitions.length,
       lng: sumLng / validExhibitions.length
     };
-  }, [validExhibitions]);
+  };
 
-  // Initialiser kartet
-  const initializeMap = useCallback(async () => {
-    if (!mapRef.current) return;
-
-    const loader = new Loader({
-      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-      version: 'weekly',
-      libraries: ['places']
-    });
-
-    try {
-      const google = await loader.load();
-      const center = getMapCenter();
-      
-      const mapOptions: google.maps.MapOptions = {
-        center,
-        zoom: validExhibitions.length > 0 ? 5 : 3,
-        mapTypeControl: true,
-        streetViewControl: true,
-        fullscreenControl: true,
-        zoomControl: true,
-        styles: [
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }]
-          }
-        ]
-      };
-
-      const map = new google.maps.Map(mapRef.current, mapOptions);
-      mapInstanceRef.current = map;
-      infoWindowRef.current = new google.maps.InfoWindow();
-
-      // Legg til søkeboks hvis aktivert
-      if (showSearchBox && searchInputRef.current) {
-        const searchBox = new google.maps.places.SearchBox(searchInputRef.current);
-        searchBoxRef.current = searchBox;
-
-        map.controls[google.maps.ControlPosition.TOP_CENTER].push(searchInputRef.current);
-
-        // Håndter søkeresultater
-        searchBox.addListener('places_changed', () => {
-          const places = searchBox.getPlaces();
-          if (!places || places.length === 0) return;
-
-          const place = places[0];
-          if (!place.geometry || !place.geometry.location) return;
-
-          // Oppdater kartet
-          map.setCenter(place.geometry.location);
-          map.setZoom(12);
-
-          // Kall callback hvis den finnes
-          if (onLocationSelect) {
-            onLocationSelect({
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng()
-            });
-          }
-        });
-      }
-
-      // Legg til markører
-      validExhibitions.forEach(exhibition => {
-        if (!exhibition.location.coordinates) return;
-
-        const marker = new google.maps.Marker({
-          position: {
-            lat: exhibition.location.coordinates.lat,
-            lng: exhibition.location.coordinates.lng
-          },
-          map,
-          title: exhibition.title,
-          animation: google.maps.Animation.DROP
-        });
-
-        // Opprett info-vindu innhold
-        const content = document.createElement('div');
-        content.className = 'p-2';
-        content.innerHTML = `
-          <h3 class="font-bold text-sm mb-1">${exhibition.title}</h3>
-          <p class="text-xs mb-1">${exhibition.location.name}, ${exhibition.location.city}</p>
-          ${exhibition.closedDay ? `<p class="text-xs text-gray-600 mb-1">Stengt på ${exhibition.closedDay}er</p>` : ''}
-          <a href="/exhibition/${exhibition._id}" class="text-rose-500 text-xs hover:underline">Se detaljer</a>
-        `;
-
-        // Legg til klikk-håndtering
-        marker.addListener('click', () => {
-          if (infoWindowRef.current) {
-            infoWindowRef.current.setContent(content);
-            infoWindowRef.current.open(map, marker);
-          }
-        });
-
-        markersRef.current.push(marker);
-      });
-
-      // Tilpass kartutsnittet til å vise alle markører
-      if (validExhibitions.length > 0) {
-        const bounds = new google.maps.LatLngBounds();
-        markersRef.current.forEach(marker => {
-          bounds.extend(marker.getPosition()!);
-        });
-        map.fitBounds(bounds, 50);
-      }
-
-    } catch (error) {
-      console.error('Error loading Google Maps:', error);
-    }
-  }, [validExhibitions, getMapCenter, showSearchBox, onLocationSelect]);
-
-  // Initialiser kart når komponenten monteres
   useEffect(() => {
-    initializeMap();
-
+    // Opprette kartet når komponenten monteres
+    if (!mapContainer.current || map.current) return;
+    
+    const center = getMapCenter();
+    
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/light-v11',
+      center: [center.lng, center.lat],
+      zoom: validExhibitions.length > 0 ? 3 : 1
+    });
+    
+    map.current.on('load', () => {
+      setMapLoaded(true);
+    });
+    
+    // Rydde opp ved avmontering
     return () => {
-      // Rydd opp markører og infovindu
-      markersRef.current.forEach(marker => marker.setMap(null));
-      markersRef.current = [];
-      if (infoWindowRef.current) {
-        infoWindowRef.current.close();
-      }
+      map.current?.remove();
+      map.current = null;
     };
-  }, [initializeMap]);
+  }, []);
+  
+  // Legg til markører når kartet er lastet og når utstillingslisten endres
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    
+    // Fjern eventuelle eksisterende markører
+    const markers = document.querySelectorAll('.mapboxgl-marker');
+    markers.forEach(marker => marker.remove());
+    
+    // Legg til markør for hver utstilling med koordinater
+    validExhibitions.forEach(exhibition => {
+      if (!exhibition.location.coordinates) return;
+      
+      // Opprett popup-innhold
+      const popupContent = document.createElement('div');
+      popupContent.innerHTML = `
+        <h3 class="font-bold text-sm">${exhibition.title}</h3>
+        <p class="text-xs">${exhibition.location.name}, ${exhibition.location.city}</p>
+        <a href="/exhibition/${exhibition._id}" class="text-rose-500 text-xs hover:underline">View Details</a>
+      `;
+      
+      // Opprett popup
+      const popup = new mapboxgl.Popup({ offset: 25 })
+        .setDOMContent(popupContent);
+      
+      // Opprett og stil markør
+      const marker = document.createElement('div');
+      marker.className = 'marker';
+      marker.style.width = '24px';
+      marker.style.height = '24px';
+      marker.style.backgroundImage = 'url(https://cdn-icons-png.flaticon.com/512/684/684908.png)';
+      marker.style.backgroundSize = 'cover';
+      marker.style.cursor = 'pointer';
+      
+      // Legg til markør på kartet
+      new mapboxgl.Marker(marker)
+        .setLngLat([exhibition.location.coordinates.lng, exhibition.location.coordinates.lat])
+        .setPopup(popup)
+        .addTo(map.current!);
+    });
+    
+    // Juster kartutsnittet til å vise alle markører
+    if (validExhibitions.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      
+      validExhibitions.forEach(exhibition => {
+        if (exhibition.location.coordinates) {
+          bounds.extend([
+            exhibition.location.coordinates.lng,
+            exhibition.location.coordinates.lat
+          ]);
+        }
+      });
+      
+      map.current.fitBounds(bounds, {
+        padding: 50,
+        maxZoom: 15
+      });
+    }
+  }, [mapLoaded, exhibitions]);
 
   return (
-    <div className="relative w-full" style={{ height }}>
-      {showSearchBox && (
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="Søk etter sted..."
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-64 px-4 py-2 rounded-lg border border-gray-300 shadow-md"
-        />
+    <div className="relative w-full h-full">
+      <div ref={mapContainer} className="w-full h-full min-h-[500px] rounded-lg overflow-hidden" />
+      {!mapboxgl.supported() && (
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+          <p className="text-center text-gray-700">
+          Your browser doesn&apos;t support Mapbox GL. Please try a different browser.
+          </p>
+        </div>
       )}
-      <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden" />
-      
       {validExhibitions.length === 0 && (
         <div className="absolute inset-0 bg-gray-100/80 flex items-center justify-center">
           <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
-            <h3 className="text-xl font-bold mb-2">Ingen utstillinger med stedsdata</h3>
+            <h3 className="text-xl font-bold mb-2">No exhibitions with location data</h3>
             <p className="text-gray-600 mb-4">
-              Det er ingen utstillinger med koordinater å vise på kartet. Prøv å legge til utstillinger med gyldig stedsdata.
+              There are no exhibitions with coordinates to display on the map. Try adding exhibitions with valid location data.
             </p>
             <Link href="/admin/exhibitions/new" className="text-rose-500 hover:underline">
-              Legg til utstilling med koordinater
+              Add Exhibition with Coordinates
             </Link>
           </div>
         </div>

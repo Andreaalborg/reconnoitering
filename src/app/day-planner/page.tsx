@@ -232,21 +232,21 @@ function DayPlannerContent() {
             try {
               // Calculate travel time and distance
               const routeInfo = await calculateTravelTime(
-                { lat: origin.lat, lng: origin.lng },
-                { lat: destination.lat, lng: destination.lng },
-                item.transportMode
-              );
-              
+              { lat: origin.lat, lng: origin.lng },
+              { lat: destination.lat, lng: destination.lng },
+              item.transportMode
+            );
+            
               // Update transport item with calculated data
               item.transportTime = Math.ceil(routeInfo.durationSeconds / 60);
               item.transportDistance = routeInfo.distanceMeters;
               item.transportPolyline = routeInfo.polyline;
               item.transportError = undefined;
-              
+            
               // Update end time based on duration
-              const startTimeMinutes = timeStringToMinutes(item.startTime);
+            const startTimeMinutes = timeStringToMinutes(item.startTime);
               const endTimeMinutes = startTimeMinutes + item.transportTime;
-              item.endTime = minutesToTimeString(endTimeMinutes);
+            item.endTime = minutesToTimeString(endTimeMinutes);
               
             } catch (error: any) {
               console.error(`Error calculating route between ${prevItem.exhibition.title} and ${nextItem.exhibition.title}:`, error);
@@ -383,7 +383,7 @@ function DayPlannerContent() {
       newItinerary[index].transportTime = undefined;
       newItinerary[index].transportDistance = undefined;
       newItinerary[index].transportError = undefined;
-
+      
       setItinerary(newItinerary);
       
       // Recalculate routes after changing transport mode
@@ -522,8 +522,8 @@ function DayPlannerContent() {
       const sumLat = locationMarkers.reduce((sum, marker) => sum + marker.position.lat, 0);
       const sumLng = locationMarkers.reduce((sum, marker) => sum + marker.position.lng, 0);
       mapCenter = {
-        lat: sumLat / locationMarkers.length,
-        lng: sumLng / locationMarkers.length
+          lat: sumLat / locationMarkers.length,
+          lng: sumLng / locationMarkers.length
       };
     }
     
@@ -612,20 +612,20 @@ function DayPlannerContent() {
                 className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors inline-flex items-center"
                 title="Download .ics calendar file"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5 mr-2" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                  />
-                </svg>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 mr-2" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                    />
+                  </svg>
                 Export Calendar (.ics)
               </button>
               
@@ -923,39 +923,39 @@ function DayPlannerContent() {
                                     <div>
                                       <div className="flex justify-between items-start text-gray-700">
                                         <div className="flex items-center">
-                                          {/* Icon based on transport mode */}
-                                          <div className="mr-3">
-                                            {item.transportMode === 'WALK' && (
-                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
-                                              </svg>
-                                            )}
-                                            {item.transportMode === 'TRANSIT' && (
-                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path d="M12 2c-4.42 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-6H6V6h5v5zm5.5 6c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6h-5V6h5v5z" />
-                                              </svg>
-                                            )}
-                                            {item.transportMode === 'DRIVE' && (
-                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
-                                              </svg>
-                                            )}
-                                            {item.transportMode === 'BICYCLE' && (
-                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z" />
-                                              </svg>
-                                            )}
+                                        {/* Icon based on transport mode */}
+                                        <div className="mr-3">
+                                          {item.transportMode === 'WALK' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
+                                            </svg>
+                                          )}
+                                          {item.transportMode === 'TRANSIT' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path d="M12 2c-4.42 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-6H6V6h5v5zm5.5 6c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6h-5V6h5v5z" />
+                                            </svg>
+                                          )}
+                                          {item.transportMode === 'DRIVE' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+                                            </svg>
+                                          )}
+                                          {item.transportMode === 'BICYCLE' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z" />
+                                            </svg>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Transport info */}
+                                        <div>
+                                          <div className="font-medium">
+                                            {item.transportMode === 'WALK' ? 'Walking' : 
+                                             item.transportMode === 'TRANSIT' ? 'Public Transport' : 
+                                             item.transportMode === 'DRIVE' ? 'Driving' :
+                                             'Cycling'}
                                           </div>
-                                          
-                                          {/* Transport info */}
-                                          <div>
-                                            <div className="font-medium">
-                                              {item.transportMode === 'WALK' ? 'Walking' : 
-                                               item.transportMode === 'TRANSIT' ? 'Public Transport' : 
-                                               item.transportMode === 'DRIVE' ? 'Driving' :
-                                               'Cycling'}
-                                            </div>
-                                            <div className="text-sm">
+                                          <div className="text-sm">
                                               Travel time: {formatDuration(item.transportTime)}
                                               {item.transportDistance !== undefined && (
                                                 <span className="ml-2 text-gray-500">
@@ -965,8 +965,8 @@ function DayPlannerContent() {
                                               {item.transportError && (
                                                 <span className="ml-2 text-red-500 text-xs">({item.transportError})</span>
                                               )}
-                                            </div>
                                           </div>
+                                        </div>
                                         </div>
                                         
                                         {/* Add Google Maps Link */}

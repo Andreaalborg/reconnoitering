@@ -6,13 +6,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-interface Exhibition {
+interface PopulatedExhibition {
   _id: string;
   title: string;
-  location: {
+  venue: {
+    _id: string;
+    name: string;
     city: string;
     country: string;
-  };
+    address?: string;
+  } | null;
   startDate: string;
   endDate: string;
 }
@@ -23,7 +26,7 @@ export default function AdminDashboard() {
   
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
+  const [exhibitions, setExhibitions] = useState<PopulatedExhibition[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -37,13 +40,20 @@ export default function AdminDashboard() {
     }
     
     const fetchExhibitions = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('/api/exhibitions');
+        const response = await fetch('/api/admin/exhibitions');
         if (!response.ok) {
-          throw new Error('Failed to fetch exhibitions');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Kunne ikke hente utstillinger');
         }
         const data = await response.json();
-        setExhibitions(data.data);
+        if (data.success && Array.isArray(data.data)) {
+          setExhibitions(data.data);
+        } else {
+          setExhibitions([]);
+          console.warn("Mottok ugyldig data for utstillinger", data);
+        }
       } catch (error) {
         console.error('Error fetching exhibitions:', error);
       } finally {
@@ -67,21 +77,22 @@ export default function AdminDashboard() {
   };
   
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this exhibition?')) {
+    if (window.confirm('Er du sikker på at du vil slette denne utstillingen?')) {
       try {
-        const response = await fetch(`/api/exhibitions/${id}`, {
+        const response = await fetch(`/api/admin/exhibitions/${id}`, {
           method: 'DELETE',
         });
         
         if (!response.ok) {
-          throw new Error('Failed to delete exhibition');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Kunne ikke slette utstillingen');
         }
         
-        // Refresh the list
         setExhibitions(exhibitions.filter(ex => ex._id !== id));
-      } catch (error) {
+        alert('Utstilling slettet!');
+      } catch (error: any) {
         console.error('Error deleting exhibition:', error);
-        alert('Error deleting exhibition. Please try again.');
+        alert(`Feil ved sletting: ${error.message}`);
       }
     }
   };
@@ -113,6 +124,9 @@ export default function AdminDashboard() {
               <div className="ml-6 flex items-center space-x-4">
                 <Link href="/admin/dashboard" className="px-3 py-2 rounded-md text-sm font-medium text-gray-900 bg-gray-100">
                   Dashboard
+                </Link>
+                <Link href="/admin/venues" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
+                  Venues
                 </Link>
                 <Link href="/admin/exhibitions/new" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
                   Add Exhibition
@@ -153,7 +167,7 @@ export default function AdminDashboard() {
                   Title
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
+                  Location (Venue)
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Dates
@@ -172,8 +186,11 @@ export default function AdminDashboard() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 font-medium">
+                      {exhibition.venue?.name || 'Ukjent Venue'}
+                    </div>
                     <div className="text-sm text-gray-500">
-                      {exhibition.location.city}, {exhibition.location.country}
+                      {exhibition.venue ? `${exhibition.venue.city}, ${exhibition.venue.country}` : '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -201,7 +218,7 @@ export default function AdminDashboard() {
               {exhibitions.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                    No exhibitions found.
+                    Ingen utstillinger funnet.
                   </td>
                 </tr>
               )}

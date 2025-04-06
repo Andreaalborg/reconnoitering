@@ -49,11 +49,16 @@ export async function GET(request: NextRequest) {
 
     // Apply selected cities filter 
     const citiesParam = searchParams.get('cities');
+    const cityParam = searchParams.get('city'); // Check for singular 'city' too
+
     if (citiesParam) {
         const cityList = citiesParam.split(',').map(c => c.trim()).filter(Boolean);
         if (cityList.length > 0) {
             query['location.city'] = { $in: cityList.map(city => new RegExp(`^${city}$`, 'i')) };
         }
+    } else if (cityParam) {
+        // Handle singular 'city' parameter
+        query['location.city'] = { $regex: new RegExp(`^${cityParam}$`, 'i') };
     }
 
     // Apply other filters (Category, Artist, Tag)
@@ -64,8 +69,40 @@ export async function GET(request: NextRequest) {
     const tag = searchParams.get('tag');
     if (tag) { query.tags = { $regex: new RegExp(`^${tag}$`, 'i') }; }
     
-    // Date range filter - Assuming this route doesn't handle date range like /date
-    // Remove date logic if not applicable here
+    // --- Date Range Filter --- 
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+
+    if (startDateParam && endDateParam) {
+      // Validate dates (optional but recommended)
+      try {
+        const searchStart = new Date(startDateParam);
+        const searchEnd = new Date(endDateParam);
+        searchEnd.setHours(23, 59, 59, 999); // Include the entire end day
+
+        query.startDate = { $lte: searchEnd }; // Exhibition must start before or on search end date
+        query.endDate = { $gte: searchStart }; // Exhibition must end on or after search start date
+      } catch (dateError) {
+        console.error("Invalid date format received:", startDateParam, endDateParam);
+        // Decide how to handle invalid dates - return error or ignore?
+        // For now, we ignore the date filter if format is bad
+      }
+    } else if (startDateParam) {
+      // Handle case where only startDate is provided (interpret as single day search)
+       try {
+        const searchDate = new Date(startDateParam);
+        const searchStart = new Date(searchDate);
+        searchStart.setHours(0, 0, 0, 0); 
+        const searchEnd = new Date(searchDate);
+        searchEnd.setHours(23, 59, 59, 999); 
+
+        query.startDate = { $lte: searchEnd }; // Exhibition must start before or on this day
+        query.endDate = { $gte: searchStart }; // Exhibition must end on or after this day
+      } catch (dateError) {
+         console.error("Invalid date format received for single day:", startDateParam);
+      }
+    }
+    // --------------------------
 
     // Sorting logic (adjust based on $text search)
     const sort = searchParams.get('sort') || '-addedDate';

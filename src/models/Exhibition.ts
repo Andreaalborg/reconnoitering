@@ -1,125 +1,67 @@
 // src/models/Exhibition.ts - Model definition only
 
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IExhibition extends Document {
   title: string;
-  description: string;
-  coverImage: string;
-  images: string[];
+  venue: Types.ObjectId;
+  description?: string;
   startDate: Date;
   endDate: Date;
-  location: {
-    name: string;
-    address?: string;
-    city: string;
-    country: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
-  category: string[];
-  artists: string[];
-  tags: string[];
-  ticketPrice?: string;
+  imageUrl?: string;
+  tags?: string[];
   ticketUrl?: string;
   websiteUrl?: string;
+  notes?: string;
   addedDate: Date;
-  lastUpdated: Date; // New field to track when the exhibition was last updated
-  popularity: number;
-  featured: boolean;
-  closedDay?: string; // New field for the day of the week when the exhibition is closed
+  lastUpdated: Date;
 }
 
 const ExhibitionSchema: Schema = new Schema({
   title: {
     type: String,
-    required: [true, 'Please provide a title for the exhibition'],
-    maxlength: [100, 'Title cannot be more than 100 characters']
+    required: [true, 'Tittel er påkrevd'],
+    trim: true,
+    maxlength: [150, 'Tittel kan ikke være lengre enn 150 tegn']
+  },
+  venue: {
+    type: Schema.Types.ObjectId,
+    ref: 'Venue',
+    required: [true, 'Venue er påkrevd']
   },
   description: {
     type: String,
-    required: [true, 'Please provide a description'],
+    trim: true
   },
-  coverImage: {
-    type: String,
-    required: [true, 'Please provide a cover image URL'],
-  },
-  images: [String],
   startDate: {
     type: Date,
-    required: [true, 'Please provide a start date'],
+    required: [true, 'Startdato er påkrevd']
   },
   endDate: {
     type: Date,
-    required: [true, 'Please provide an end date'],
+    required: [true, 'Sluttdato er påkrevd']
   },
-  location: {
-    name: {
-      type: String,
-      required: [true, 'Please provide a location name'],
-    },
-    address: String,
-    city: {
-      type: String,
-      required: [true, 'Please provide a city'],
-    },
-    country: {
-      type: String,
-      required: [true, 'Please provide a country'],
-    },
-    coordinates: {
-      lat: Number,
-      lng: Number,
-    }
-  },
-  category: [String],
-  artists: [String],
+  imageUrl: String,
   tags: [String],
-  ticketPrice: String,
   ticketUrl: String,
   websiteUrl: String,
+  notes: String,
   addedDate: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
   lastUpdated: {
     type: Date,
-    default: Date.now,
-  },
-  popularity: {
-    type: Number,
-    default: 0,
-  },
-  featured: {
-    type: Boolean,
-    default: false,
-  },
-  closedDay: {
-    type: String,
-    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', null],
-    default: null
+    default: Date.now
   }
 });
 
-// Text indexes for search
-ExhibitionSchema.index({ 
-  title: 'text', 
-  description: 'text', 
-  'location.name': 'text', 
-  'location.city': 'text', 
-  'location.country': 'text', 
-  artists: 'text',
-  category: 'text', 
-  tags: 'text'
-});
+ExhibitionSchema.index({ title: 'text', description: 'text', tags: 1 });
+ExhibitionSchema.index({ venue: 1, startDate: 1, endDate: 1 });
 
-// Update the lastUpdated field when an exhibition is modified
 ExhibitionSchema.pre('findOneAndUpdate', function() {
   this.set({ lastUpdated: new Date() });
 });
 
-// Use mongoose.models to check if the model already exists or create a new one
 export default mongoose.models.Exhibition || 
   mongoose.model<IExhibition>('Exhibition', ExhibitionSchema);
