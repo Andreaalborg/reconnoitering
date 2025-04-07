@@ -69,15 +69,18 @@ const ExhibitionCard = ({
   
   const exhibitionStatus = getExhibitionStatus();
   
-  // Fallback image if the provided one fails
-  const fallbackImage = "https://picsum.photos/seed/" + id + "/800/600";
+  // Use a more general, random placeholder if the specific one fails or isn't provided
+  const fallbackImage = 'https://source.unsplash.com/random/800x600/?museum,art'; 
+
+  // Determine image source
+  const imageSrc = imageError || !coverImage ? fallbackImage : coverImage;
   
   return (
     <Link href={`/exhibition/${id}`} className="block h-full">
       <div className="rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 bg-white h-full flex flex-col">
         <div className="relative h-48 w-full">
           <Image 
-            src={imageError ? fallbackImage : coverImage}
+            src={imageSrc}
             alt={`Image of ${title} exhibition`}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

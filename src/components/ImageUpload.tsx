@@ -18,9 +18,8 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
   // For demonstration purposes, we'll use a placeholder image service
   // In a real application, you would use a file upload API with proper storage
   const getRandomPlaceholderImage = () => {
-    // Generate a random ID for the placeholder image
-    const randomId = Math.floor(Math.random() * 1000);
-    return `https://picsum.photos/id/${randomId}/800/600`;
+    // Bruk Unsplash random images med kategori istedenfor spesifikke Picsum IDs
+    return `https://source.unsplash.com/random/800x600/?art,museum,exhibition`;
   };
   
   const simulateUpload = async (file: File) => {
@@ -49,13 +48,14 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
       // Simulate an upload delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // In a real application, you would upload the file to a server here
-      // and get back a permanent URL
-      const uploadedImageUrl = getRandomPlaceholderImage();
+      // I en reell implementasjon ville vi lastet opp filen til en server her
+      // og fått tilbake en permanent URL. For nå, bruk enten en faktisk opplasting
+      // eller en mer pålitelig placeholder-tjeneste.
       
-      // Set the uploaded image URL
-      setPreviewUrl(uploadedImageUrl);
-      onImageChange(uploadedImageUrl);
+      // MERK: Her returnerer vi faktisk bare objektURL'en for den opplastede filen
+      // Dette vil fungere midlertidig, men er ikke en permanent løsning
+      // siden objektURL-en vil bli ugyldig når siden lastes på nytt
+      onImageChange(objectUrl);
       
     } catch (err) {
       console.error('Error uploading image:', err);

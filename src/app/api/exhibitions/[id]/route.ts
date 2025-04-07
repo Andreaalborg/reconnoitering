@@ -4,6 +4,8 @@ import Exhibition from '@/models/Exhibition';
 import Venue from '@/models/Venue';
 import mongoose from 'mongoose';
 
+export const dynamic = 'force-dynamic'; // Opt out of caching
+
 export async function GET(
   request: NextRequest,
   context: { params: { id: string } }

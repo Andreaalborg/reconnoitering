@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
 
+export const dynamic = 'force-dynamic'; // Opt out of caching
+
 // --- Define European Countries ---
 // Note: This list might need refinement based on specific definitions (e.g., including transcontinental countries)
 const EUROPEAN_COUNTRIES = [

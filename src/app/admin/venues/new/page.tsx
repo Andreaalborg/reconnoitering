@@ -129,58 +129,108 @@ export default function AddVenue() {
   // Håndterer når et sted er valgt fra søkeboksen
   const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
     if (!place.geometry || !place.geometry.location) return;
+
+    const location = place.geometry.location;
+    const addressComponents = place.address_components || [];
     
-    const location = {
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng()
-    };
-    
-    // Finn by fra adressekomponenter med prioritet
-    let cityName = '';
-    const locality = place.address_components?.find(comp => comp.types.includes('locality'));
-    const adminArea2 = place.address_components?.find(comp => comp.types.includes('administrative_area_level_2'));
-    const adminArea1 = place.address_components?.find(comp => comp.types.includes('administrative_area_level_1'));
-    
-    // Velg by-navn med prioritet
-    if (locality) {
-      cityName = locality.long_name;
-    } else if (adminArea2) {
-      cityName = adminArea2.long_name;
-    } else if (adminArea1) {
-      cityName = adminArea1.long_name;
+    // Mer detaljert logging for debugging
+    console.log('Full place object:', place);
+    console.log('Place address components:', JSON.stringify(addressComponents));
+
+    let city = '';
+    let country = '';
+    let streetName = '';
+    let streetNumber = '';
+    let administrativeAreas: string[] = [];
+
+    // Først samle alle administrative områder i en array for fallback
+    addressComponents.forEach(component => {
+      const types = component.types;
+      if (types.includes('administrative_area_level_1')) {
+        administrativeAreas.push(component.long_name);
+      } else if (types.includes('administrative_area_level_2')) {
+        administrativeAreas.push(component.long_name);
+      } else if (types.includes('administrative_area_level_3')) {
+        administrativeAreas.push(component.long_name);
+      }
+    });
+
+    // Deretter finn by og land
+    addressComponents.forEach(component => {
+      const types = component.types;
+      
+      // By - prioritert rekkefølge
+      if (types.includes('locality')) {
+        city = component.long_name;
+      } else if (types.includes('postal_town') && !city) {
+        city = component.long_name;
+      }
+      
+      // Land
+      if (types.includes('country')) {
+        country = component.long_name;
+      }
+      
+      // Gate og nummer for adresse
+      if (types.includes('route')) {
+        streetName = component.long_name;
+      }
+      if (types.includes('street_number')) {
+        streetNumber = component.long_name;
+      }
+    });
+
+    // Fallback til administrative områder hvis by fortsatt er tom
+    if (!city && administrativeAreas.length > 0) {
+      // Bruk det minste/mest spesifikke administrative området (som oftest er byen)
+      city = administrativeAreas[administrativeAreas.length - 1];
     }
-    
+
     // Fjern "kommune" fra by-navnet hvis det er inkludert
-    cityName = cityName.replace(/\s*kommune\s*/i, '');
+    city = city.replace(/\s*kommune\s*/i, '');
     
-    // Oppdater skjemaet med stedets informasjon
+    const address = place.formatted_address || `${streetName} ${streetNumber}`.trim(); 
+
+    console.log('Parsed values before setting form data:', { 
+      name: place.name, 
+      address: address, 
+      city: city, 
+      country: country,
+      coordinates: {
+        lat: location.lat(),
+        lng: location.lng()
+      }
+    });
+
     setFormData(prev => ({
       ...prev,
-      name: place.name || '',
-      address: place.formatted_address || '',
-      city: cityName,
-      country: place.address_components?.find(comp => 
-        comp.types.includes('country')
-      )?.long_name || '',
-      coordinates: location,
-      websiteUrl: place.website || ''
+      name: place.name || prev.name, 
+      address: address, 
+      city: city || prev.city, 
+      country: country || prev.country, 
+      coordinates: {
+        lat: location.lat(),
+        lng: location.lng()
+      },
+      websiteUrl: place.website || prev.websiteUrl
     }));
-    
-    // Oppdater kartet
-    setMapCenter(location);
+
+    // Logg formData etter oppdatering (merk: dette vil vise forrige state pga. React state update timing)
+    console.log('Form data after update:', formData);
+    setTimeout(() => console.log('Form data after timeout:', formData), 10);
+
+    // Gjenbruk eksisterende map/warning logikk
+    const mapLocation = { lat: location.lat(), lng: location.lng() };
+    setMapCenter(mapLocation);
     setMapMarkerPos({
       id: 'venue-location',
-      position: location,
-      title: place.name || 'Nytt utstillingssted'
+      position: mapLocation,
+      title: place.name || 'Selected Location'
     });
-    
-    // Sjekk om landet er i Europa
-    const country = place.address_components?.find(comp => 
-      comp.types.includes('country')
-    )?.long_name;
-    
+
+    // Sjekk land for advarsel
     if (country && !EUROPEAN_COUNTRIES.map(c => c.toLowerCase()).includes(country.toLowerCase())) {
-      setCountryWarning('Advarsel: Dette landet er utenfor det typiske europeiske fokusområdet.');
+      setCountryWarning('Warning: This country is outside the typical European focus area.');
     } else {
       setCountryWarning('');
     }
