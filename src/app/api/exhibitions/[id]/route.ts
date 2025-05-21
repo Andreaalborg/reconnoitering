@@ -34,6 +34,9 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Log the exhibition data for debugging
+    console.log('Exhibition data:', JSON.stringify(exhibition, null, 2));
     
     return NextResponse.json({ success: true, data: exhibition });
   } catch (error: any) {
@@ -60,7 +63,10 @@ export async function PUT(
       id,
       body,
       { new: true, runValidators: true }
-    );
+    ).populate<{ venue: typeof Venue }>({
+      path: 'venue',
+      select: 'name city country address websiteUrl coordinates'
+    });
     
     if (!exhibition) {
       return NextResponse.json(

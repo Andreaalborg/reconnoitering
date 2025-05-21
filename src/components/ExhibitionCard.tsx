@@ -7,12 +7,18 @@ import { useState } from 'react';
 interface ExhibitionCardProps {
   id: string;
   title: string;
-  location: {
+  venue?: {
     name: string;
     city: string;
     country: string;
   };
-  coverImage: string;
+  location?: {
+    name?: string;
+    city?: string;
+    country?: string;
+  };
+  imageUrl?: string;
+  coverImage?: string; // For kompatibilitet med eldre komponenter
   startDate: string;
   endDate: string;
 }
@@ -20,8 +26,10 @@ interface ExhibitionCardProps {
 const ExhibitionCard = ({ 
   id, 
   title, 
+  venue,
   location, 
-  coverImage, 
+  imageUrl, 
+  coverImage, // Støtte for begge bildeformater
   startDate, 
   endDate 
 }: ExhibitionCardProps) => {
@@ -34,7 +42,7 @@ const ExhibitionCard = ({
       if (isNaN(date.getTime())) {
         return 'Date unavailable';
       }
-      return new Intl.DateTimeFormat('en-US', { 
+      return new Intl.DateTimeFormat('no-NO', { 
         month: 'short', 
         day: 'numeric' 
       }).format(date);
@@ -56,11 +64,11 @@ const ExhibitionCard = ({
       }
       
       if (now < start) {
-        return { status: 'upcoming', label: 'Upcoming', color: 'bg-blue-100 text-blue-800' };
+        return { status: 'upcoming', label: 'Kommende', color: 'bg-blue-100 text-blue-800' };
       } else if (now > end) {
-        return { status: 'past', label: 'Past', color: 'bg-gray-100 text-gray-800' };
+        return { status: 'past', label: 'Avsluttet', color: 'bg-gray-100 text-gray-800' };
       } else {
-        return { status: 'ongoing', label: 'Now Showing', color: 'bg-green-100 text-green-800' };
+        return { status: 'ongoing', label: 'Pågår', color: 'bg-green-100 text-green-800' };
       }
     } catch (error) {
       return null;
@@ -69,11 +77,23 @@ const ExhibitionCard = ({
   
   const exhibitionStatus = getExhibitionStatus();
   
-  // Use a more general, random placeholder if the specific one fails or isn't provided
-  const fallbackImage = 'https://source.unsplash.com/random/800x600/?museum,art'; 
+  // Bruk et fast plassholderbilde
+  const fallbackImage = '/images/placeholder-exhibition.svg';
 
-  // Determine image source
-  const imageSrc = imageError || !coverImage ? fallbackImage : coverImage;
+  // Determine image source (støtte for både imageUrl og coverImage)
+  const actualImageUrl = imageUrl || coverImage || '';
+  const imageSrc = imageError || !actualImageUrl ? fallbackImage : actualImageUrl;
+  
+  // Get location display text
+  const getLocationText = () => {
+    if (venue?.name) {
+      return `${venue.name}, ${venue.city || ''}`;
+    }
+    if (location?.name) {
+      return `${location.name}, ${location.city || ''}`;
+    }
+    return location?.city || 'Ukjent sted';
+  };
   
   return (
     <Link href={`/exhibition/${id}`} className="block h-full">
@@ -81,7 +101,7 @@ const ExhibitionCard = ({
         <div className="relative h-48 w-full">
           <Image 
             src={imageSrc}
-            alt={`Image of ${title} exhibition`}
+            alt={`Bilde av ${title} utstilling`}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover transition-transform duration-300 hover:scale-105"
@@ -101,7 +121,7 @@ const ExhibitionCard = ({
             {title}
           </h3>
           <p className="text-gray-600 text-sm">
-            {location.name}, {location.city}
+            {getLocationText()}
           </p>
           <div className="flex justify-between items-center mt-auto pt-2">
             <span className="text-gray-500 text-sm">

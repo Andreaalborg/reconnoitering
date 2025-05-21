@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
+import Venue from '@/models/Venue';
+import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic'; // Opt out of caching
 
@@ -24,12 +26,18 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
+    // Registrer Venue-modellen hvis den ikke allerede er registrert
+    if (!mongoose.models.Venue) {
+      mongoose.model('Venue', Venue.schema);
+    }
+    
     const { searchParams } = new URL(request.url);
     
-    // Base query: Always filter for European countries initially
-    const query: any = {
-      'location.country': { $in: EUROPEAN_COUNTRIES } 
-    };
+    // Base query: Gjør location-filter valgfritt
+    const query: any = {};
+
+    // Legg til logging for debugging
+    console.log('Initial query:', query);
 
     // Apply text search if present
     const searchText = searchParams.get('q');
@@ -45,13 +53,18 @@ export async function GET(request: NextRequest) {
       if (selectedCountryValues.length > 0) {
         const validSelectedCountries = selectedCountryValues.filter(c => 
             EUROPEAN_COUNTRIES.some(ec => ec.toLowerCase() === c.toLowerCase()));
-        query['location.country'] = { $in: validSelectedCountries.length > 0 ? validSelectedCountries : [] };
+        if (validSelectedCountries.length > 0) {
+          query['location.country'] = { $in: validSelectedCountries };
+        }
       }
-    } // If no countriesParam, the initial $in: EUROPEAN_COUNTRIES applies
+    }
+
+    // Legg til logging for debugging
+    console.log('Query after country filter:', query);
 
     // Apply selected cities filter 
     const citiesParam = searchParams.get('cities');
-    const cityParam = searchParams.get('city'); // Check for singular 'city' too
+    const cityParam = searchParams.get('city');
 
     if (citiesParam) {
         const cityList = citiesParam.split(',').map(c => c.trim()).filter(Boolean);
@@ -59,9 +72,11 @@ export async function GET(request: NextRequest) {
             query['location.city'] = { $in: cityList.map(city => new RegExp(`^${city}$`, 'i')) };
         }
     } else if (cityParam) {
-        // Handle singular 'city' parameter
         query['location.city'] = { $regex: new RegExp(`^${cityParam}$`, 'i') };
     }
+
+    // Legg til logging for debugging
+    console.log('Final query:', query);
 
     // Apply other filters (Category, Artist, Tag)
     const category = searchParams.get('category');
@@ -149,12 +164,17 @@ export async function GET(request: NextRequest) {
     
     // Hent utstillinger
     const exhibitions = await Exhibition.find(query)
+      .populate('venue')
       .sort(sortOption)
       .limit(limit)
       .skip(skip);
       
     const total = await Exhibition.countDocuments(query);
     
+    // Legg til logging for debugging
+    console.log('Found exhibitions:', exhibitions.length);
+    console.log('Total count:', total);
+
     // --- Fetching Filter Options (Context-Aware) ---
     
     // Base query for fetching filter options (start with current filters)
@@ -185,9 +205,7 @@ export async function GET(request: NextRequest) {
       meta: {
         total,
         filter_options: {
-          // Cities are now dynamic based on other filters (especially country)
           cities: uniqueCities.sort(), 
-          // Countries: Always return the full static list for the frontend dropdown
           countries: EUROPEAN_COUNTRIES, 
           categories: Array.from(new Set(uniqueCategories.flat())).sort(),
           artists: Array.from(new Set(uniqueArtists.flat())).sort(),
@@ -198,8 +216,13 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Error fetching exhibitions:', error);
+    // Legg til mer detaljert feilmelding
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch exhibitions' },
+      { 
+        success: false, 
+        error: 'Failed to fetch exhibitions',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
@@ -210,6 +233,22 @@ export async function POST(request: Request) {
     await dbConnect();
     
     const body = await request.json();
+    
+    // Hent venue for å få location-feltene
+    const venue = await mongoose.model('Venue').findById(body.venue);
+    if (!venue) {
+      return NextResponse.json(
+        { success: false, error: 'Venue not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Kopier location-feltene fra venue
+    body.location = {
+      city: venue.city,
+      country: venue.country
+    };
+    
     const exhibition = await Exhibition.create(body);
     
     return NextResponse.json({ 

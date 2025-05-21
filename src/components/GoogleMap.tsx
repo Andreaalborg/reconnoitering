@@ -195,24 +195,29 @@ export default function GoogleMap({
       // --- Setup Autocomplete Search Box (New approach) --- 
       if (showSearchBox && searchInputRef.current && onPlaceSelected) {
         const autocomplete = new google.maps.places.Autocomplete(searchInputRef.current, {
-            fields: ["place_id", "geometry", "name", "formatted_address"], // Specify needed fields
-            types: ['geocode', 'establishment'], // Optional: restrict types
-            componentRestrictions: { country: "no" }, // Restrict to Norway
+            fields: ["place_id", "geometry", "name", "formatted_address", "address_components", "website"], // Lagt til address_components og website
+            // types: ['geocode', 'establishment'], // Midlertidig fjernet for testing
+            // componentRestrictions: { country: "no" }, // Midlertidig fjernet for testing
         });
         autocompleteRef.current = autocomplete;
         
-        // Bind Autocomplete results to the map's viewport
         autocomplete.bindTo("bounds", map);
 
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
+          console.log("[GoogleMap.tsx] Place changed event fired. Place:", place); // Ny logg
+
+          // Kall onPlaceSelected uansett for debugging, men sjekk om den eksisterer
+          if (onPlaceSelected) {
+            onPlaceSelected(place);
+          }
+
           if (place.geometry && place.geometry.location) {
+              console.log("[GoogleMap.tsx] Place has geometry.");
               map.setCenter(place.geometry.location);
-              map.setZoom(15); // Zoom in on selected place
-              onPlaceSelected(place); // Call the callback with the full place details
+              map.setZoom(15); 
           } else {
-              console.log("Autocomplete place selected without geometry:", place.name);
-              // Optionally handle this, e.g., show a message
+              console.warn("[GoogleMap.tsx] Autocomplete place selected WITHOUT geometry. Place name:", place.name);
           }
         });
       }

@@ -18,7 +18,8 @@ interface Exhibition {
   images: string[];
   startDate: string;
   endDate: string;
-  location: {
+  venue?: {
+    _id: string;
     name: string;
     address: string;
     city: string;
@@ -27,6 +28,10 @@ interface Exhibition {
       lat: number;
       lng: number;
     };
+  };
+  location?: {
+    city: string;
+    country: string;
   };
   category: string[];
   artists: string[];
@@ -58,19 +63,39 @@ function ExhibitionDetailContent() {
       if (!exhibitionId) return;
       
       try {
+        console.log(`Fetching exhibition with ID: ${exhibitionId}`);
         const response = await fetch(`/api/exhibitions/${exhibitionId}`);
+        
         if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          console.error('API Error Response:', response.status, errorData);
+          
           if (response.status === 404) {
-            throw new Error('Exhibition not found');
+            throw new Error('Fant ikke utstillingen');
           }
-          throw new Error('Failed to fetch exhibition');
+          throw new Error(`Kunne ikke hente utstilling: ${errorData?.error || response.statusText}`);
         }
         
         const data = await response.json();
-        setExhibition(data.data);
+        console.log('Exhibition data received:', data);
+        
+        if (!data.success || !data.data) {
+          throw new Error('Ugyldig dataformat fra API');
+        }
+        
+        // Ensure required arrays exist
+        const exhibition = {
+          ...data.data,
+          artists: data.data.artists || [],
+          category: data.data.category || [],
+          tags: data.data.tags || [],
+          images: data.data.images || []
+        };
+        
+        setExhibition(exhibition);
       } catch (err) {
         console.error('Error fetching exhibition:', err);
-        setError('Failed to load exhibition. Please try again later.');
+        setError(`Kunne ikke laste utstillingen. ${err instanceof Error ? err.message : 'Prøv igjen senere.'}`);
       } finally {
         setLoading(false);
       }
@@ -181,6 +206,49 @@ function ExhibitionDetailContent() {
     router.push(`/date-search?date=${date}&exhibitions=${exhibitionId}`);
   };
   
+  // Get location display text
+  const getLocationText = () => {
+    if (!exhibition) return 'Ukjent sted';
+    if (exhibition.venue?.name) {
+      return `${exhibition.venue.name}, ${exhibition.venue.city}, ${exhibition.venue.country}`;
+    }
+    return `${exhibition.location?.city || 'Ukjent sted'}, ${exhibition.location?.country || ''}`;
+  };
+  
+  // Check if today is the weekly closing day
+  const todayDayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const isClosedToday = exhibition?.closedDay === todayDayOfWeek;
+  
+  // Sørg for at venue og location håndteres riktig for kartet
+  const getMapCoordinates = () => {
+    if (exhibition?.venue?.coordinates?.lat && exhibition?.venue?.coordinates?.lng) {
+      return {
+        lat: exhibition.venue.coordinates.lat,
+        lng: exhibition.venue.coordinates.lng
+      };
+    }
+    return { lat: 0, lng: 0 }; // Standardverdi hvis koordinater mangler
+  };
+  
+  // Få riktig navninformasjon for kartet
+  const getVenueInfoForMap = () => {
+    if (exhibition?.venue?.name) {
+      return exhibition.venue.name;
+    }
+    if (exhibition?.location?.city) {
+      return exhibition.location.city;
+    }
+    return 'Ukjent sted';
+  };
+  
+  // Hjelpefunksjon for å sikre at bildeadresser er gyldige
+  const getValidImageUrl = (imageUrl?: string): string => {
+    if (!imageUrl || imageUrl === '') {
+      return '/images/placeholder-exhibition.svg';
+    }
+    return imageUrl;
+  };
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -200,10 +268,10 @@ function ExhibitionDetailContent() {
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Exhibition Not Found</h1>
-            <p className="mt-4 text-lg text-gray-600">The exhibition you're looking for doesn&apos;t exist or has been removed.</p>
+            <h1 className="text-3xl font-bold text-gray-900">Utstilling ikke funnet</h1>
+            <p className="mt-4 text-lg text-gray-600">Utstillingen du leter etter eksisterer ikke eller har blitt fjernet.</p>
             <Link href="/exhibitions" className="mt-8 inline-block bg-rose-500 text-white px-6 py-3 rounded-md">
-              Browse All Exhibitions
+              Bla gjennom alle utstillinger
             </Link>
           </div>
         </main>
@@ -215,15 +283,11 @@ function ExhibitionDetailContent() {
   const endDate = formatDate(exhibition.endDate);
   
   // Check if exhibition has location coordinates for map
-  const hasCoordinates = exhibition.location?.coordinates?.lat && exhibition.location?.coordinates?.lng;
+  const hasCoordinates = exhibition.venue?.coordinates?.lat && exhibition.venue?.coordinates?.lng;
   
   // Check if today is during the exhibition period
   const today = new Date();
   const isCurrentlyRunning = new Date(exhibition.startDate) <= today && today <= new Date(exhibition.endDate);
-  
-  // Check if today is the weekly closing day
-  const todayDayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' });
-  const isClosedToday = exhibition.closedDay === todayDayOfWeek;
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -234,13 +298,13 @@ function ExhibitionDetailContent() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          Back to Exhibitions
+          Tilbake til utstillinger
         </Link>
         
         <div className="bg-white rounded-xl overflow-hidden shadow-lg">
           <div className="relative h-96 w-full">
             <Image 
-              src={exhibition.coverImage}
+              src={getValidImageUrl(exhibition.coverImage)}
               alt={exhibition.title}
               fill
               className="object-cover"
@@ -248,17 +312,17 @@ function ExhibitionDetailContent() {
               priority
             />
             
-            {/* Status badges for ongoing, closed today */}
+            {/* Exhibition status badges */}
             <div className="absolute top-4 left-4 flex flex-col space-y-2">
               {isCurrentlyRunning && (
                 <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
-                  Currently Running
+                  Pågående
                 </span>
               )}
               
               {isCurrentlyRunning && isClosedToday && (
                 <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
-                  Closed Today
+                  Stengt i dag
                 </span>
               )}
             </div>
@@ -292,23 +356,23 @@ function ExhibitionDetailContent() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{exhibition.title}</h1>
                 <p className="text-lg text-gray-600">
-                  {exhibition.location.name}, {exhibition.location.city}, {exhibition.location.country}
+                  {getLocationText()}
                 </p>
                 
                 {/* Display closed day if set */}
                 {exhibition.closedDay && (
                   <p className="mt-2 text-amber-600">
-                    <span className="font-medium">Closed on {exhibition.closedDay}s</span>
+                    <span className="font-medium">Stengt på {exhibition.closedDay}er</span>
                   </p>
                 )}
               </div>
               
               <div className="mt-4 md:mt-0 bg-gray-100 rounded-lg p-4">
-                <p className="font-medium">Dates</p>
+                <p className="font-medium">Datoer</p>
                 <p className="text-gray-600">{startDate} - {endDate}</p>
                 {exhibition.ticketPrice && (
                   <>
-                    <p className="font-medium mt-2">Ticket Price</p>
+                    <p className="font-medium mt-2">Billettpris</p>
                     <p className="text-gray-600">{exhibition.ticketPrice}</p>
                   </>
                 )}
@@ -319,7 +383,7 @@ function ExhibitionDetailContent() {
                       onClick={() => handleBookOnDate(new Date().toISOString().split('T')[0])}
                       className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded text-sm"
                     >
-                      Visit Today
+                      Besøk i dag
                     </button>
                   )}
                   
@@ -330,7 +394,7 @@ function ExhibitionDetailContent() {
                       rel="noopener noreferrer"
                       className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded text-center text-sm"
                     >
-                      Buy Tickets
+                      Kjøp billetter
                     </a>
                   )}
                   
@@ -340,28 +404,36 @@ function ExhibitionDetailContent() {
             </div>
             
             <div className="border-t border-gray-200 pt-6">
-              <h2 className="text-xl font-bold mb-4">About This Exhibition</h2>
+              <h2 className="text-xl font-bold mb-4">Om denne utstillingen</h2>
               <p className="text-gray-700 mb-6 whitespace-pre-line">{exhibition.description}</p>
               
               {/* Additional details section - artists, categories, etc. */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Artists</h3>
+                  <h3 className="text-lg font-bold mb-2">Kunstnere</h3>
                   <ul className="list-disc list-inside text-gray-600">
-                    {exhibition.artists.map((artist, index) => (
-                      <li key={index}>{artist}</li>
-                    ))}
+                    {exhibition.artists && exhibition.artists.length > 0 ? (
+                      exhibition.artists.map((artist, index) => (
+                        <li key={index}>{artist}</li>
+                      ))
+                    ) : (
+                      <li>Ingen artister oppgitt</li>
+                    )}
                   </ul>
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Categories</h3>
+                  <h3 className="text-lg font-bold mb-2">Kategorier</h3>
                   <div className="flex flex-wrap gap-2">
-                    {exhibition.category.map((category, index) => (
-                      <span key={index} className="bg-rose-100 text-rose-800 px-2 py-1 rounded-full text-sm">
-                        {category}
-                      </span>
-                    ))}
+                    {exhibition.category && exhibition.category.length > 0 ? (
+                      exhibition.category.map((category, index) => (
+                        <span key={index} className="bg-rose-100 text-rose-800 px-2 py-1 rounded-full text-sm">
+                          {category}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-500">Ingen kategorier oppgitt</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -370,32 +442,26 @@ function ExhibitionDetailContent() {
               {hasCoordinates && (
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold">Location</h3>
+                    <h3 className="text-lg font-bold">Beliggenhet</h3>
                     <button 
                       onClick={() => setShowMap(!showMap)} 
                       className="text-rose-500 hover:text-rose-700 text-sm font-medium"
                     >
-                      {showMap ? 'Hide Map' : 'Show Map'}
+                      {showMap ? 'Skjul kart' : 'Vis kart'}
                     </button>
                   </div>
                   
-                  {showMap && (
+                  {showMap && hasCoordinates && (
                     <div className="h-80 rounded-lg overflow-hidden mb-4">
                       <GoogleMap
                         apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-                        center={{
-                          lat: exhibition.location.coordinates!.lat,
-                          lng: exhibition.location.coordinates!.lng
-                        }}
+                        center={getMapCoordinates()}
                         zoom={15}
                         markers={[{
                           id: exhibition._id,
-                          position: {
-                            lat: exhibition.location.coordinates!.lat,
-                            lng: exhibition.location.coordinates!.lng
-                          },
+                          position: getMapCoordinates(),
                           title: exhibition.title,
-                          info: exhibition.location.name
+                          info: getVenueInfoForMap()
                         }]}
                         height="320px"
                       />
@@ -403,57 +469,62 @@ function ExhibitionDetailContent() {
                   )}
                   
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="font-medium">{exhibition.location.name}</p>
-                    <p className="text-gray-600">{exhibition.location.address}</p>
-                    <p className="text-gray-600">{exhibition.location.city}, {exhibition.location.country}</p>
+                    <p className="font-medium">{exhibition.venue?.name || exhibition.location?.city || 'Ukjent sted'}</p>
+                    <p className="text-gray-600">{exhibition.venue?.address || ''}</p>
+                    <p className="text-gray-600">
+                      {exhibition.location?.city || exhibition.venue?.city || ''}{exhibition.location?.city || exhibition.venue?.city ? ', ' : ''}
+                      {exhibition.location?.country || exhibition.venue?.country || ''}
+                    </p>
                   </div>
                 </div>
               )}
               
               {/* Additional images */}
-              {exhibition.images && exhibition.images.length > 0 && (
+              {exhibition.images && exhibition.images.length > 0 && exhibition.images.some(img => !!img) && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold mb-3">Gallery</h3>
+                  <h3 className="text-lg font-bold mb-3">Galleri</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {exhibition.images.map((image, index) => (
-                      <div key={index} className="relative h-32 rounded-lg overflow-hidden">
-                        <Image 
-                          src={image} 
-                          alt={`${exhibition.title} image ${index + 1}`}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 50vw, 25vw"
-                        />
-                      </div>
-                    ))}
+                    {exhibition.images
+                      .filter(image => image && image !== '')
+                      .map((image, index) => (
+                        <div key={index} className="relative h-32 rounded-lg overflow-hidden">
+                          <Image 
+                            src={getValidImageUrl(image)}
+                            alt={`${exhibition.title} bilde ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                          />
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}
               
               {/* Plan your visit section */}
               <div className="mb-6 bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-lg font-bold mb-3">Plan Your Visit</h3>
+                <h3 className="text-lg font-bold mb-3">Planlegg ditt besøk</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-medium text-blue-800 mb-2">Opening Times</h4>
+                    <h4 className="font-medium text-blue-800 mb-2">Åpningstider</h4>
                     <p className="text-gray-700 mb-2">
-                      This exhibition runs from {startDate} to {endDate}.
+                      Denne utstillingen er åpen fra {startDate} til {endDate}.
                     </p>
                     {exhibition.closedDay && (
                       <p className="text-gray-700 mb-2">
-                        <span className="font-medium">Closed on {exhibition.closedDay}s</span>
+                        <span className="font-medium">Stengt på {exhibition.closedDay}er</span>
                       </p>
                     )}
                     <p className="text-sm text-gray-600">
-                      Please check the official website for specific opening hours and any special closures.
+                      Vennligst sjekk den offisielle nettsiden for spesifikke åpningstider og eventuelle spesielle lukninger.
                     </p>
                   </div>
                   
                   <div>
-                    <h4 className="font-medium text-blue-800 mb-2">Add to Itinerary</h4>
+                    <h4 className="font-medium text-blue-800 mb-2">Legg til i reiseplan</h4>
                     <p className="text-gray-700 mb-3">
-                      Planning a visit? Choose a date to add this exhibition to your day plan:
+                      Planlegger du et besøk? Velg en dato for å legge denne utstillingen til din dagsplan:
                     </p>
                     
                     <div className="flex items-center space-x-2">
@@ -472,7 +543,7 @@ function ExhibitionDetailContent() {
                         }}
                         className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
                       >
-                        Add to Plan
+                        Legg til i plan
                       </button>
                     </div>
                   </div>
@@ -488,7 +559,7 @@ function ExhibitionDetailContent() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center text-rose-500 hover:text-rose-700"
                   >
-                    <span>Visit Exhibition Website</span>
+                    <span>Besøk utstillingens nettside</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
@@ -499,7 +570,7 @@ function ExhibitionDetailContent() {
               {/* Tags at the bottom */}
               {exhibition.tags && exhibition.tags.length > 0 && (
                 <div className="mt-8 pt-4 border-t border-gray-200">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Tags</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Emneord</h3>
                   <div className="flex flex-wrap gap-2">
                     {exhibition.tags.map((tag, index) => (
                       <span key={index} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">

@@ -15,6 +15,10 @@ export interface IExhibition extends Document {
   notes?: string;
   addedDate: Date;
   lastUpdated: Date;
+  location: {
+    city: string;
+    country: string;
+  };
 }
 
 const ExhibitionSchema: Schema = new Schema({
@@ -53,11 +57,21 @@ const ExhibitionSchema: Schema = new Schema({
   lastUpdated: {
     type: Date,
     default: Date.now
+  },
+  location: {
+    city: String,
+    country: String
   }
 });
 
 ExhibitionSchema.index({ title: 'text', description: 'text', tags: 1 });
 ExhibitionSchema.index({ venue: 1, startDate: 1, endDate: 1 });
+ExhibitionSchema.index({ 'location.city': 1, 'location.country': 1 });
+
+ExhibitionSchema.pre('save', function(next) {
+  this.lastUpdated = new Date();
+  next();
+});
 
 ExhibitionSchema.pre('findOneAndUpdate', function() {
   this.set({ lastUpdated: new Date() });

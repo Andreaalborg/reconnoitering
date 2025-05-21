@@ -7,6 +7,7 @@ export interface IVenue extends Document {
   address?: string;
   city: string;
   country: string;
+  postalCode?: string;
   coordinates?: {
     lat: number;
     lng: number;
@@ -38,6 +39,10 @@ const VenueSchema: Schema = new Schema({
   country: {
     type: String,
     required: [true, 'Please provide a country'],
+    trim: true
+  },
+  postalCode: {
+    type: String,
     trim: true
   },
   coordinates: {

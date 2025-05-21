@@ -7,8 +7,12 @@ import ExhibitionCard from './ExhibitionCard';
 interface Exhibition {
   _id: string;
   title: string;
-  location: {
+  venue?: {
     name: string;
+    city: string;
+    country: string;
+  };
+  location?: {
     city: string;
     country: string;
   };
@@ -87,6 +91,7 @@ const ExhibitionRow = ({ title, exhibitions, viewAllLink }: ExhibitionRowProps) 
               <ExhibitionCard
                 id={exhibition._id}
                 title={exhibition.title}
+                venue={exhibition.venue}
                 location={exhibition.location}
                 coverImage={exhibition.coverImage}
                 startDate={exhibition.startDate}

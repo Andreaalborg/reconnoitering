@@ -15,27 +15,25 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // For demonstration purposes, we'll use a placeholder image service
-  // In a real application, you would use a file upload API with proper storage
-  const getRandomPlaceholderImage = () => {
-    // Bruk Unsplash random images med kategori istedenfor spesifikke Picsum IDs
-    return `https://source.unsplash.com/random/800x600/?art,museum,exhibition`;
+  // Bruk et fast plassholderbilde
+  const getPlaceholderImage = () => {
+    return '/images/placeholder-exhibition.svg';
   };
   
-  const simulateUpload = async (file: File) => {
+  const uploadImage = async (file: File) => {
     setUploading(true);
     setError(null);
     
     // Check file size (limit to 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('File size exceeds 5MB limit');
+      setError('Filstørrelsen overstiger 5MB');
       setUploading(false);
       return;
     }
     
     // Check file type
     if (!file.type.startsWith('image/')) {
-      setError('Only image files are allowed');
+      setError('Kun bilder er tillatt');
       setUploading(false);
       return;
     }
@@ -45,21 +43,31 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
       
-      // Simulate an upload delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Last opp filen til serveren
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // I en reell implementasjon ville vi lastet opp filen til en server her
-      // og fått tilbake en permanent URL. For nå, bruk enten en faktisk opplasting
-      // eller en mer pålitelig placeholder-tjeneste.
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
       
-      // MERK: Her returnerer vi faktisk bare objektURL'en for den opplastede filen
-      // Dette vil fungere midlertidig, men er ikke en permanent løsning
-      // siden objektURL-en vil bli ugyldig når siden lastes på nytt
-      onImageChange(objectUrl);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Kunne ikke laste opp bilde');
+      }
+      
+      // Oppdater preview og parent med den permanente URL-en
+      setPreviewUrl(result.data.url);
+      onImageChange(result.data.url);
       
     } catch (err) {
       console.error('Error uploading image:', err);
-      setError('Failed to upload image. Please try again.');
+      setError(err instanceof Error ? err.message : 'Kunne ikke laste opp bilde. Prøv igjen.');
+      // Fjern preview hvis opplastingen feilet
+      setPreviewUrl('');
+      onImageChange('');
     } finally {
       setUploading(false);
     }
@@ -68,13 +76,13 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      simulateUpload(file);
+      uploadImage(file);
     }
   };
   
   const handlePlaceholderClick = () => {
-    // For demonstration: set a random placeholder image
-    const placeholderUrl = getRandomPlaceholderImage();
+    // Bruk det faste plassholderbildet
+    const placeholderUrl = getPlaceholderImage();
     setPreviewUrl(placeholderUrl);
     onImageChange(placeholderUrl);
   };
@@ -91,7 +99,7 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
             <div className="relative w-full h-full">
               <Image 
                 src={previewUrl}
-                alt="Image preview"
+                alt="Bilde forhåndsvisning"
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -103,7 +111,7 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
                   onImageChange('');
                 }}
                 className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full w-8 h-8 flex items-center justify-center"
-                title="Remove image"
+                title="Fjern bilde"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -115,7 +123,7 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="mx-auto w-12 h-12 text-gray-400">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
               </svg>
-              <p className="mt-2 text-sm text-gray-500">No image selected</p>
+              <p className="mt-2 text-sm text-gray-500">Ingen bilde valgt</p>
             </div>
           )}
           
@@ -129,7 +137,7 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
         <div className="flex flex-col space-y-3">
           <div>
             <label className="block w-full cursor-pointer bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm font-medium text-gray-700 text-center hover:bg-gray-50">
-              <span>Upload an image</span>
+              <span>Last opp bilde</span>
               <input 
                 type="file"
                 accept="image/*"
@@ -137,7 +145,7 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
                 className="sr-only"
               />
             </label>
-            <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+            <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF opptil 5MB</p>
           </div>
           
           <button
@@ -145,26 +153,13 @@ const ImageUpload = ({ initialImage, onImageChange, label, required = false }: I
             onClick={handlePlaceholderClick}
             className="bg-gray-200 border border-gray-300 rounded-md py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
-            Use placeholder image
+            Bruk plassholderbilde
           </button>
           
           {error && (
             <div className="text-red-500 text-sm mt-1">
               {error}
             </div>
-          )}
-          
-          {previewUrl && (
-            <input
-              type="text"
-              value={previewUrl}
-              onChange={(e) => {
-                setPreviewUrl(e.target.value);
-                onImageChange(e.target.value);
-              }}
-              placeholder="Image URL"
-              className="border border-gray-300 rounded-md py-2 px-3 text-sm"
-            />
           )}
         </div>
       </div>

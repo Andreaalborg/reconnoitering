@@ -47,6 +47,7 @@ export default function AddVenue() {
     address: '',
     city: '',
     country: '',
+    postalCode: '',
     coordinates: {
       lat: null as number | null,
       lng: null as number | null
@@ -122,25 +123,39 @@ export default function AddVenue() {
       coordinates: { lat: location.lat, lng: location.lng }
     }));
     
-    // Utfør reverse geocoding for å få adresse, by og land
-    reverseGeocodeAndUpdateForm(location);
+    // I stedet for å kalle en separat geocoding-funksjon, vis bare koordinater
+    // og la brukeren fylle ut resten av informasjonen manuelt
+    setLoading(false);
+    setError('');
+    console.log('Kart klikket på koordinater:', location);
   };
   
   // Håndterer når et sted er valgt fra søkeboksen
   const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
-    if (!place.geometry || !place.geometry.location) return;
+    console.log('Place selected:', place);
+    
+    if (!place.geometry || !place.geometry.location) {
+      console.error('Place selected but no geometry or location found', place);
+      return;
+    }
 
     const location = place.geometry.location;
     const addressComponents = place.address_components || [];
     
     // Mer detaljert logging for debugging
     console.log('Full place object:', place);
-    console.log('Place address components:', JSON.stringify(addressComponents));
+    console.log('Place formatted address:', place.formatted_address);
+    console.log('Place geometry location:', {
+      lat: location.lat(),
+      lng: location.lng()
+    });
+    console.log('Place address components:', JSON.stringify(addressComponents, null, 2));
 
     let city = '';
     let country = '';
     let streetName = '';
     let streetNumber = '';
+    let postalCode = '';
     let administrativeAreas: string[] = [];
 
     // Først samle alle administrative områder i en array for fallback
@@ -178,6 +193,11 @@ export default function AddVenue() {
       if (types.includes('street_number')) {
         streetNumber = component.long_name;
       }
+      
+      // Postnummer
+      if (types.includes('postal_code')) {
+        postalCode = component.long_name;
+      }
     });
 
     // Fallback til administrative områder hvis by fortsatt er tom
@@ -189,11 +209,13 @@ export default function AddVenue() {
     // Fjern "kommune" fra by-navnet hvis det er inkludert
     city = city.replace(/\s*kommune\s*/i, '');
     
-    const address = place.formatted_address || `${streetName} ${streetNumber}`.trim(); 
+    // Sett sammen adressen som Gatenavn Husnummer
+    const address = streetName ? (streetName + (streetNumber ? ' ' + streetNumber : '')) : place.formatted_address || '';
 
     console.log('Parsed values before setting form data:', { 
       name: place.name, 
       address: address, 
+      postalCode: postalCode,
       city: city, 
       country: country,
       coordinates: {
@@ -202,12 +224,14 @@ export default function AddVenue() {
       }
     });
 
+    // Oppdater formData med alle feltene
     setFormData(prev => ({
       ...prev,
       name: place.name || prev.name, 
-      address: address, 
+      address: address || prev.address, 
       city: city || prev.city, 
       country: country || prev.country, 
+      postalCode: postalCode || prev.postalCode,
       coordinates: {
         lat: location.lat(),
         lng: location.lng()
@@ -215,11 +239,10 @@ export default function AddVenue() {
       websiteUrl: place.website || prev.websiteUrl
     }));
 
-    // Logg formData etter oppdatering (merk: dette vil vise forrige state pga. React state update timing)
-    console.log('Form data after update:', formData);
-    setTimeout(() => console.log('Form data after timeout:', formData), 10);
+    // Logg formData etter oppdatering
+    console.log('Form data updated with place', formData);
 
-    // Gjenbruk eksisterende map/warning logikk
+    // Oppdater kartet med den nye lokasjonen
     const mapLocation = { lat: location.lat(), lng: location.lng() };
     setMapCenter(mapLocation);
     setMapMarkerPos({
@@ -249,12 +272,15 @@ export default function AddVenue() {
         throw new Error(data.error || 'Kunne ikke utføre geocoding');
       }
       
+      console.log('Geocode data received:', data);
+      
       // Oppdater skjemaet med geocodingresultater
       setFormData(prev => ({
         ...prev,
         address: data.address || '',
         city: data.city || '',
         country: data.country || '',
+        postalCode: data.postalCode || '',
         coordinates: { lat: location.lat, lng: location.lng }
       }));
       
@@ -421,28 +447,42 @@ export default function AddVenue() {
                   </div>
                   
                   <div>
-                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                      Land *
+                    <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+                      Postnummer
                     </label>
                     <input
                       type="text"
-                      id="country"
-                      name="country"
-                      value={formData.country}
+                      id="postalCode"
+                      name="postalCode"
+                      value={formData.postalCode}
                       onChange={handleChange}
-                      required
-                      list="countries"
                       className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                     />
-                    <datalist id="countries">
-                      {EUROPEAN_COUNTRIES.map((country) => (
-                        <option key={country} value={country} />
-                      ))}
-                    </datalist>
-                    {countryWarning && (
-                      <p className="mt-1 text-sm text-amber-500">{countryWarning}</p>
-                    )}
                   </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                    Land *
+                  </label>
+                  <input
+                    type="text"
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleChange}
+                    required
+                    list="countries"
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                  <datalist id="countries">
+                    {EUROPEAN_COUNTRIES.map((country) => (
+                      <option key={country} value={country} />
+                    ))}
+                  </datalist>
+                  {countryWarning && (
+                    <p className="mt-1 text-sm text-amber-500">{countryWarning}</p>
+                  )}
                 </div>
                 
                 <div>

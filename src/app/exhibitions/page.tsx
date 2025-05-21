@@ -460,6 +460,7 @@ function ExhibitionsContent() {
                   key={exhibition._id}
                   id={exhibition._id}
                   title={exhibition.title}
+                  venue={exhibition.venue}
                   location={exhibition.location}
                   coverImage={exhibition.coverImage}
                   startDate={exhibition.startDate}
