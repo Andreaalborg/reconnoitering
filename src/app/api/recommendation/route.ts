@@ -58,15 +58,11 @@ export async function GET(request: NextRequest) {
     // Apply preferences
     const matchScoreFields: any = {};
     
-    // Preferred categories (boost score for matches)
-    if (preferences.preferredCategories && preferences.preferredCategories.length > 0) {
-      matchScoreFields.preferredCategoryMatch = {
+    // Preferred tags (boost score for matches)
+    if (preferences.preferredTags && preferences.preferredTags.length > 0) {
+      matchScoreFields.preferredTagMatch = {
         $size: {
-          $filter: {
-            input: '$category',
-            as: 'cat',
-            cond: { $in: ['$$cat', preferences.preferredCategories] }
-          }
+          $setIntersection: ['$tags', preferences.preferredTags]
         }
       };
     }
@@ -75,11 +71,7 @@ export async function GET(request: NextRequest) {
     if (preferences.preferredArtists && preferences.preferredArtists.length > 0) {
       matchScoreFields.preferredArtistMatch = {
         $size: {
-          $filter: {
-            input: '$artists',
-            as: 'artist',
-            cond: { $in: ['$$artist', preferences.preferredArtists] }
-          }
+          $setIntersection: ['$artists', preferences.preferredArtists]
         }
       };
     }
@@ -93,9 +85,9 @@ export async function GET(request: NextRequest) {
       ];
     }
     
-    // Excluded categories (filter out unwanted categories)
-    if (preferences.excludedCategories && preferences.excludedCategories.length > 0) {
-      query.category = { $not: { $elemMatch: { $in: preferences.excludedCategories } } };
+    // Excluded tags (filter out unwanted tags)
+    if (preferences.excludedTags && preferences.excludedTags.length > 0) {
+      query.tags = { $nin: preferences.excludedTags };
     }
     
     // City filter (if provided)
@@ -104,16 +96,16 @@ export async function GET(request: NextRequest) {
       query['location.city'] = city;
     }
     
-    // Category filter (if provided)
-    const category = searchParams.get('category');
-    if (category) {
-      if (!query.category) {
-        query.category = { $in: [category] };
-      } else {
-        // Handle case where excludedCategories is already set
-        query.$and = query.$and || [];
-        query.$and.push({ category: { $in: [category] } });
-      }
+    // Tag filter (if provided)
+    const tag = searchParams.get('tag');
+    if (tag) {
+      query.tags = tag;
+    }
+    
+    // Artist filter (if provided)
+    const artist = searchParams.get('artist');
+    if (artist) {
+      query.artists = artist;
     }
     
     // Limit and skip for pagination
@@ -135,21 +127,50 @@ export async function GET(request: NextRequest) {
             // Calculate recommendation score (higher is better)
             recommendationScore: {
               $sum: [
-                { $ifNull: ['$preferredCategoryMatch', 0] },
+                { $multiply: [{ $ifNull: ['$preferredTagMatch', 0] }, 2] }, // Tags vektes høyere
                 { $ifNull: ['$preferredArtistMatch', 0] },
-                { $ifNull: ['$popularity', 0] }
+                { $cond: [{ $in: ['$location.city', preferences.preferredLocations || []] }, 1, 0] }
               ]
             }
           }
         },
         { $sort: { recommendationScore: -1, startDate: 1 } },
         { $skip: skip },
-        { $limit: limit }
+        { $limit: limit },
+        // Populate venue, tags og artists
+        {
+          $lookup: {
+            from: 'venues',
+            localField: 'venue',
+            foreignField: '_id',
+            as: 'venue'
+          }
+        },
+        { $unwind: '$venue' },
+        {
+          $lookup: {
+            from: 'tags',
+            localField: 'tags',
+            foreignField: '_id',
+            as: 'tags'
+          }
+        },
+        {
+          $lookup: {
+            from: 'artists',
+            localField: 'artists',
+            foreignField: '_id',
+            as: 'artists'
+          }
+        }
       ]);
     } else {
-      // If no preferences are set, just sort by popularity
+      // If no preferences are set, just sort by date
       exhibitions = await Exhibition.find(query)
-        .sort({ popularity: -1, startDate: 1 })
+        .populate('venue')
+        .populate('tags')
+        .populate('artists')
+        .sort({ startDate: 1 })
         .skip(skip)
         .limit(limit);
     }

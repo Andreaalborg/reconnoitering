@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ImageUpload from '@/components/ImageUpload';
 import AsyncSelect from 'react-select/async';
+import Select from 'react-select';
 
 // Interface for Venue data (kun det vi trenger å vise)
 interface SimpleVenue {
@@ -15,6 +16,20 @@ interface SimpleVenue {
   address?: string;
   city: string;
   country: string;
+}
+
+// Interface for Tag
+interface Tag {
+  _id: string;
+  name: string;
+  slug: string;
+}
+
+// Interface for Artist
+interface Artist {
+  _id: string;
+  name: string;
+  slug: string;
 }
 
 // Hjelpekomponent for å håndtere logikken (pga Suspense for useSearchParams)
@@ -30,6 +45,10 @@ function AddExhibitionContent() {
   const [selectedVenue, setSelectedVenue] = useState<SimpleVenue | null>(null);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(venueIdFromUrl);
   
+  // State for tags og artists
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [availableArtists, setAvailableArtists] = useState<Artist[]>([]);
+  
   // State for selve utstillingsskjemaet (uten lokasjonsfelter)
   const [formData, setFormData] = useState({
     title: '',
@@ -37,7 +56,8 @@ function AddExhibitionContent() {
     imageUrl: '', // Endret fra coverImage for konsistens?
     startDate: '',
     endDate: '',
-    tags: [] as string[],
+    tags: [] as string[], // Dette vil være array av tag IDs
+    artists: [] as string[], // Dette vil være array av artist IDs
     ticketUrl: '',
     websiteUrl: '',
     notes: '', // Lagt til notes
@@ -60,6 +80,31 @@ function AddExhibitionContent() {
        router.push('/admin/login'); // Eller en annen passende side
      }
   }, [status, session, router]);
+
+  // Hent tags og artists når komponenten laster
+  useEffect(() => {
+    if (status === 'authenticated') {
+      // Hent tags
+      fetch('/api/admin/tags')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setAvailableTags(data.data);
+          }
+        })
+        .catch(err => console.error('Error fetching tags:', err));
+
+      // Hent artists
+      fetch('/api/admin/artists')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setAvailableArtists(data.data);
+          }
+        })
+        .catch(err => console.error('Error fetching artists:', err));
+    }
+  }, [status]);
 
   // Hent venue-data hvis ID kommer fra URL
   useEffect(() => {
@@ -411,16 +456,61 @@ Mangler venuet du ser etter?
                 </div>
                 
                 <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">Tags (komma-separert)</label>
-                  <input
-                    type="text"
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <Select
                     id="tags"
-                    name="tags"
-                    value={formData.tags.join(', ')}
-                  onChange={handleArrayChange}
-                  placeholder="f.eks. samtidskunst, fotografi, skulptur"
-                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    instanceId="tags-select"
+                    isMulti
+                    options={availableTags.map(tag => ({
+                      value: tag._id,
+                      label: tag.name
+                    }))}
+                    value={formData.tags.map(tagId => {
+                      const tag = availableTags.find(t => t._id === tagId);
+                      return tag ? { value: tag._id, label: tag.name } : null;
+                    }).filter(Boolean)}
+                    onChange={(selectedOptions) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        tags: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+                      }));
+                    }}
+                    placeholder="Velg tags..."
+                    classNamePrefix="react-select"
+                    noOptionsMessage={() => 'Ingen tags funnet'}
                   />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Mangler en tag? <Link href="/admin/tags" className="text-blue-600 hover:underline">Administrer tags</Link>
+                  </p>
+                </div>
+                
+                <div>
+                  <label htmlFor="artists" className="block text-sm font-medium text-gray-700 mb-1">Kunstnere</label>
+                  <Select
+                    id="artists"
+                    instanceId="artists-select"
+                    isMulti
+                    options={availableArtists.map(artist => ({
+                      value: artist._id,
+                      label: artist.name
+                    }))}
+                    value={formData.artists.map(artistId => {
+                      const artist = availableArtists.find(a => a._id === artistId);
+                      return artist ? { value: artist._id, label: artist.name } : null;
+                    }).filter(Boolean)}
+                    onChange={(selectedOptions) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        artists: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+                      }));
+                    }}
+                    placeholder="Velg kunstnere..."
+                    classNamePrefix="react-select"
+                    noOptionsMessage={() => 'Ingen kunstnere funnet'}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Mangler en kunstner? <Link href="/admin/artists" className="text-blue-600 hover:underline">Administrer kunstnere</Link>
+                  </p>
                 </div>
                 
                 <div>

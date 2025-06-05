@@ -9,7 +9,8 @@ export interface IExhibition extends Document {
   startDate: Date;
   endDate: Date;
   imageUrl?: string;
-  tags?: string[];
+  tags: Types.ObjectId[];
+  artists: Types.ObjectId[];
   ticketUrl?: string;
   websiteUrl?: string;
   notes?: string;
@@ -46,7 +47,14 @@ const ExhibitionSchema: Schema = new Schema({
     required: [true, 'Sluttdato er påkrevd']
   },
   imageUrl: String,
-  tags: [String],
+  tags: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Tag'
+  }],
+  artists: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Artist'
+  }],
   ticketUrl: String,
   websiteUrl: String,
   notes: String,
@@ -64,9 +72,11 @@ const ExhibitionSchema: Schema = new Schema({
   }
 });
 
-ExhibitionSchema.index({ title: 'text', description: 'text', tags: 1 });
+ExhibitionSchema.index({ title: 'text', description: 'text' });
 ExhibitionSchema.index({ venue: 1, startDate: 1, endDate: 1 });
 ExhibitionSchema.index({ 'location.city': 1, 'location.country': 1 });
+ExhibitionSchema.index({ tags: 1 });
+ExhibitionSchema.index({ artists: 1 });
 
 ExhibitionSchema.pre('save', function(next) {
   this.lastUpdated = new Date();

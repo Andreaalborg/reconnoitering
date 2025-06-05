@@ -10,10 +10,10 @@ export interface IUser extends Document {
   image?: string;
   favoriteExhibitions?: string[];
   preferences?: {
-    preferredCategories?: string[];
+    preferredTags?: string[];
     preferredArtists?: string[];
     preferredLocations?: string[];
-    excludedCategories?: string[];
+    excludedTags?: string[];
     notificationFrequency?: 'daily' | 'weekly' | 'monthly' | 'never';
   };
   createdAt: Date;
@@ -47,10 +47,19 @@ const UserSchema: Schema = new Schema({
     ref: 'Exhibition'
   }],
   preferences: {
-    preferredCategories: [String],
-    preferredArtists: [String],
+    preferredTags: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tag'
+    }],
+    preferredArtists: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Artist'
+    }],
     preferredLocations: [String],
-    excludedCategories: [String],
+    excludedTags: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tag'
+    }],
     notificationFrequency: {
       type: String,
       enum: ['daily', 'weekly', 'monthly', 'never'],
