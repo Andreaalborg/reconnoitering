@@ -40,6 +40,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Fakturaer og tilbud - IKKE del med kunde
+FAKTURA*.md
+TILBUD*.md
+*faktura*
+*tilbud*
+
+# Andre sensitive dokumenter
+/private/
+/invoices/
+/billing/
+
 
 
 
