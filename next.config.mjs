@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    // Ignoring TypeScript errors during the build process
-    ignoreBuildErrors: true,
-  },
+  // typescript: {
+  //   // Ignoring TypeScript errors during the build process
+  //   ignoreBuildErrors: true,
+  // },
   images: {
     domains: [
       'picsum.photos',
