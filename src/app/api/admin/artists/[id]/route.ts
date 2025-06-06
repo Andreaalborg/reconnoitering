@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Artist from '@/models/Artist';
 
 export async function DELETE(
-  request: NextRequest,
-  context: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
     await dbConnect();
     
-    const artist = await Artist.findByIdAndDelete(id);
+    const artist = await Artist.findByIdAndDelete(params.id);
     
     if (!artist) {
       return NextResponse.json(
