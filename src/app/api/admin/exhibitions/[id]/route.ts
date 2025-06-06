@@ -9,8 +9,8 @@ import mongoose from 'mongoose';
 
 // GET: Hent en spesifikk utstilling (for admin-bruk)
 export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
     // Sjekk admin-tilgang
@@ -27,7 +27,7 @@ export async function GET(
     const _Venue = mongoose.models.Venue || mongoose.model('Venue');
     const _Exhibition = mongoose.models.Exhibition || mongoose.model('Exhibition');
     
-    const id = context.params.id;
+    const id = params.id;
     console.log(`Admin henter exhibition med ID: ${id}`);
 
     // Valider ID
@@ -65,8 +65,8 @@ export async function GET(
 
 // PUT: Oppdater en spesifikk utstilling (for admin-bruk)
 export async function PUT(
-  request: NextRequest,
-  context: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
     // Sjekk admin-tilgang
@@ -82,7 +82,7 @@ export async function PUT(
     // Sikre at modeller er registrert
     const _Exhibition = mongoose.models.Exhibition || mongoose.model('Exhibition');
     
-    const id = context.params.id;
+    const id = params.id;
     const body = await request.json();
     console.log(`Admin oppdaterer exhibition ${id} med data:`, body);
     
@@ -155,8 +155,8 @@ export async function PUT(
 
 // DELETE: Slett en spesifikk utstilling (for admin-bruk)
 export async function DELETE(
-  request: NextRequest,
-  context: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
     // Sjekk admin-tilgang
@@ -172,7 +172,7 @@ export async function DELETE(
     // Sikre at modeller er registrert
     const _Exhibition = mongoose.models.Exhibition || mongoose.model('Exhibition');
 
-    const id = context.params.id;
+    const id = params.id;
     console.log(`Admin sletter exhibition med ID: ${id}`);
 
     // Valider ID
