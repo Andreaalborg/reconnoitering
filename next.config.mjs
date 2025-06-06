@@ -26,7 +26,7 @@ const nextConfig = {
     ],
   },
   // Turn off output export which requires static parameters
-  output: 'standalone',
+  // output: 'standalone', // Fjernet for Vercel-kompatibilitet
   // Use experimental options that work with Next.js 15
   experimental: {
     serverActions: {
