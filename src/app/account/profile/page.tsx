@@ -91,7 +91,11 @@ export default function ProfilePage() {
       
     } catch (err) {
       console.error('Error updating profile:', err);
-      setError(err.message || 'Failed to update profile. Please try again.');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred while updating profile.');
+      }
     } finally {
       setLoading(false);
     }
@@ -141,7 +145,11 @@ export default function ProfilePage() {
       setConfirmPassword('');
     } catch (err) {
       console.error('Error changing password:', err);
-      setError(err.message || 'Failed to change password. Please try again.');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred while changing password.');
+      }
     } finally {
       setLoading(false);
     }
