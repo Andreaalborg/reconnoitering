@@ -4,12 +4,13 @@ import Artist from '@/models/Artist';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { id } = context.params;
   try {
     await dbConnect();
     
-    const artist = await Artist.findByIdAndDelete(params.id);
+    const artist = await Artist.findByIdAndDelete(id);
     
     if (!artist) {
       return NextResponse.json(

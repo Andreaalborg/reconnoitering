@@ -10,8 +10,9 @@ import mongoose from 'mongoose';
 // GET: Hent en spesifikk utstilling (for admin-bruk)
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const id = context.params.id;
   try {
     // Sjekk admin-tilgang
     const session = await getServerSession(authOptions as NextAuthOptions);
@@ -27,7 +28,6 @@ export async function GET(
     const _Venue = mongoose.models.Venue || mongoose.model('Venue');
     const _Exhibition = mongoose.models.Exhibition || mongoose.model('Exhibition');
     
-    const id = params.id;
     console.log(`Admin henter exhibition med ID: ${id}`);
 
     // Valider ID
@@ -66,8 +66,9 @@ export async function GET(
 // PUT: Oppdater en spesifikk utstilling (for admin-bruk)
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const id = context.params.id;
   try {
     // Sjekk admin-tilgang
     const session = await getServerSession(authOptions as NextAuthOptions);
@@ -82,7 +83,6 @@ export async function PUT(
     // Sikre at modeller er registrert
     const _Exhibition = mongoose.models.Exhibition || mongoose.model('Exhibition');
     
-    const id = params.id;
     const body = await request.json();
     console.log(`Admin oppdaterer exhibition ${id} med data:`, body);
     
@@ -156,8 +156,9 @@ export async function PUT(
 // DELETE: Slett en spesifikk utstilling (for admin-bruk)
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const id = context.params.id;
   try {
     // Sjekk admin-tilgang
     const session = await getServerSession(authOptions as NextAuthOptions);
@@ -172,7 +173,6 @@ export async function DELETE(
     // Sikre at modeller er registrert
     const _Exhibition = mongoose.models.Exhibition || mongoose.model('Exhibition');
 
-    const id = params.id;
     console.log(`Admin sletter exhibition med ID: ${id}`);
 
     // Valider ID
