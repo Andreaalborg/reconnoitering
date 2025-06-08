@@ -6,6 +6,19 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+// Definer en type for utstillingsdataen
+interface Exhibition {
+  _id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  popularity?: number;
+  category?: string[];
+  location?: {
+    city?: string;
+  };
+}
+
 // Simple chart component for exhibition statistics
 const BarChart = ({ data, title }: { data: { label: string; value: number }[], title: string }) => {
   const maxValue = Math.max(...data.map(item => item.value));
@@ -71,23 +84,23 @@ export default function AdminAnalytics() {
         // Fetch all exhibitions to calculate statistics
         const exhibitionsResponse = await fetch('/api/exhibitions?limit=1000');
         const exhibitionsData = await exhibitionsResponse.json();
-        const exhibitions = exhibitionsData.data || [];
+        const exhibitions: Exhibition[] = exhibitionsData.data || [];
         
         const today = new Date();
         
         // Basic counts
-        const activeExhibitions = exhibitions.filter(ex => {
+        const activeExhibitions = exhibitions.filter((ex: Exhibition) => {
           const startDate = new Date(ex.startDate);
           const endDate = new Date(ex.endDate);
           return startDate <= today && endDate >= today;
         });
         
-        const upcomingExhibitions = exhibitions.filter(ex => {
+        const upcomingExhibitions = exhibitions.filter((ex: Exhibition) => {
           const startDate = new Date(ex.startDate);
           return startDate > today;
         });
         
-        const pastExhibitions = exhibitions.filter(ex => {
+        const pastExhibitions = exhibitions.filter((ex: Exhibition) => {
           const endDate = new Date(ex.endDate);
           return endDate < today;
         });
@@ -102,7 +115,7 @@ export default function AdminAnalytics() {
           totalUsers = usersData.data?.length || 0;
           
           // Calculate total favorites
-          totalFavorites = usersData.data?.reduce((acc, user) => {
+          totalFavorites = usersData.data?.reduce((acc: number, user: { favoriteExhibitions?: any[] }) => {
             return acc + (user.favoriteExhibitions?.length || 0);
           }, 0) || 0;
         } catch (error) {
@@ -113,8 +126,8 @@ export default function AdminAnalytics() {
         }
         
         // Group exhibitions by city
-        const cityCounts = {};
-        exhibitions.forEach(ex => {
+        const cityCounts: { [key: string]: number } = {};
+        exhibitions.forEach((ex: Exhibition) => {
           const city = ex.location?.city || 'Unknown';
           cityCounts[city] = (cityCounts[city] || 0) + 1;
         });
@@ -125,10 +138,10 @@ export default function AdminAnalytics() {
           .slice(0, 5);
         
         // Group exhibitions by category
-        const categoryCounts = {};
-        exhibitions.forEach(ex => {
+        const categoryCounts: { [key: string]: number } = {};
+        exhibitions.forEach((ex: Exhibition) => {
           const categories = ex.category || [];
-          categories.forEach(category => {
+          categories.forEach((category: string) => {
             categoryCounts[category] = (categoryCounts[category] || 0) + 1;
           });
         });
@@ -140,9 +153,9 @@ export default function AdminAnalytics() {
         
         // Get most popular exhibitions
         const popularExhibitions = exhibitions
-          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+          .sort((a: Exhibition, b: Exhibition) => (b.popularity || 0) - (a.popularity || 0))
           .slice(0, 5)
-          .map(ex => ({ label: ex.title, value: ex.popularity || 0 }));
+          .map((ex: Exhibition) => ({ label: ex.title, value: ex.popularity || 0 }));
         
         setStats({
           totalExhibitions: exhibitions.length,
