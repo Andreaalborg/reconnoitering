@@ -37,7 +37,7 @@ export default function ProfilePage() {
     }
   }, [status, session, router]);
   
-  const handleProfileUpdate = async (e) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -97,7 +97,7 @@ export default function ProfilePage() {
     }
   };
   
-  const handlePasswordChange = async (e) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -147,7 +147,7 @@ export default function ProfilePage() {
     }
   };
   
-  const handleImageChange = (imageUrl) => {
+  const handleImageChange = (imageUrl: string) => {
     setProfileImage(imageUrl);
     console.log('Image changed to:', imageUrl);
   };
