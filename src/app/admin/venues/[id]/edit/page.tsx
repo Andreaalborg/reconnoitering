@@ -436,7 +436,7 @@ export default function EditVenue() {
                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
                isMainMarkerDraggable={true} // Tillat dra og slipp av hovedmarkør
                mainMarker={mapMarkerPos ?? undefined} // Send inn markørposisjon
-               onMarkerDragEnd={handleMapClick} // Bruk samme funksjon for å oppdatere posisjon etter dra
+               onMainMarkerDragEnd={handleMapClick} // Bruk samme funksjon for å oppdatere posisjon etter dra
                showSearchBox={true}
              />
            </div>
