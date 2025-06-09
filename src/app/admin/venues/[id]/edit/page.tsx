@@ -434,12 +434,11 @@ export default function EditVenue() {
                onClick={handleMapClick}
                onPlaceSelected={handlePlaceSelected} // Send valgt sted tilbake hit
                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-               mapContainerStyle={{ height: '100%', width: '100%' }}
-              isMainMarkerDraggable={true} // Tillat dra og slipp av hovedmarkør
-              mainMarker={mapMarkerPos ?? undefined} // Send inn markørposisjon
-              onMarkerDragEnd={handleMapClick} // Bruk samme funksjon for å oppdatere posisjon etter dra
-              showSearchBox={true}
-            />
+               isMainMarkerDraggable={true} // Tillat dra og slipp av hovedmarkør
+               mainMarker={mapMarkerPos ?? undefined} // Send inn markørposisjon
+               onMarkerDragEnd={handleMapClick} // Bruk samme funksjon for å oppdatere posisjon etter dra
+               showSearchBox={true}
+             />
            </div>
            <div className="mt-2 text-sm text-gray-600">
              Valgte koordinater: Lat: {formData.coordinates.lat?.toFixed(4) ?? 'Ikke satt'}, Lng: {formData.coordinates.lng?.toFixed(4) ?? 'Ikke satt'}
