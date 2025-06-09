@@ -470,9 +470,15 @@ Mangler venuet du ser etter?
                       return tag ? { value: tag._id, label: tag.name } : null;
                     }).filter(Boolean)}
                     onChange={(selectedOptions) => {
+                      if (!selectedOptions) {
+                        setFormData(prev => ({ ...prev, tags: [] }));
+                        return;
+                      }
+                      const optionsArray = Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions];
+                      const newValues = optionsArray.map(opt => opt.value);
                       setFormData(prev => ({
                         ...prev,
-                        tags: (selectedOptions || []).map(opt => opt.value)
+                        tags: newValues
                       }));
                     }}
                     placeholder="Velg tags..."
@@ -499,9 +505,15 @@ Mangler venuet du ser etter?
                       return artist ? { value: artist._id, label: artist.name } : null;
                     }).filter(Boolean)}
                     onChange={(selectedOptions) => {
+                      if (!selectedOptions) {
+                        setFormData(prev => ({ ...prev, artists: [] }));
+                        return;
+                      }
+                      const optionsArray = Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions];
+                      const newValues = optionsArray.map(opt => opt.value);
                       setFormData(prev => ({
                         ...prev,
-                        artists: (selectedOptions || []).map(opt => opt.value)
+                        artists: newValues
                       }));
                     }}
                     placeholder="Velg kunstnere..."
