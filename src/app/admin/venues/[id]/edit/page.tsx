@@ -431,7 +431,7 @@ export default function EditVenue() {
                center={mapCenter}
                zoom={6} // Justert zoom
                markers={mapMarkerPos ? [mapMarkerPos] : []}
-               onMapClick={handleMapClick}
+               onClick={handleMapClick}
                onPlaceSelected={handlePlaceSelected} // Send valgt sted tilbake hit
                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
                mapContainerStyle={{ height: '100%', width: '100%' }}
