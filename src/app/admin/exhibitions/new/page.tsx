@@ -472,7 +472,7 @@ Mangler venuet du ser etter?
                     onChange={(selectedOptions) => {
                       setFormData(prev => ({
                         ...prev,
-                        tags: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+                        tags: (selectedOptions || []).map(opt => opt.value)
                       }));
                     }}
                     placeholder="Velg tags..."
@@ -501,7 +501,7 @@ Mangler venuet du ser etter?
                     onChange={(selectedOptions) => {
                       setFormData(prev => ({
                         ...prev,
-                        artists: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+                        artists: (selectedOptions || []).map(opt => opt.value)
                       }));
                     }}
                     placeholder="Velg kunstnere..."
