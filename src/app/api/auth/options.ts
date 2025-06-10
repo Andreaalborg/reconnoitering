@@ -62,7 +62,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-        session.user.image = token.picture || token.image; // Use either 'picture' or 'image'
+        session.user.image = (token.picture as string | null | undefined) || (token.image as string | null | undefined);
       }
       return session;
     }
