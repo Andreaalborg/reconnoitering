@@ -6,6 +6,9 @@ import { authOptions } from '@/app/api/auth/options';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Exhibition from '@/models/Exhibition';
+import Artist from '@/models/Artist';
+import Tag from '@/models/Tag';
+import Venue from '@/models/Venue';
 
 export async function GET(request: NextRequest) {
   try {
