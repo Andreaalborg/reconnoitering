@@ -180,22 +180,12 @@ export default function VerticalCalendar({ initialWeekOffset = 0 }: VerticalCale
             ) : (
               <ul className="space-y-3">
                 {dayExhibitions.slice(0, 3).map((exhibition) => (
-                  <li key={exhibition._id} className="text-sm">
-                    <Link href={`/exhibition/${exhibition._id}`} className="flex items-start hover:bg-gray-50 rounded p-1 -m-1">
-                      {exhibition.coverImage && (
-                        <div className="w-8 h-8 relative flex-shrink-0 mr-2 overflow-hidden rounded">
-                          <Image 
-                            src={exhibition.coverImage} 
-                            alt={exhibition.title}
-                            fill
-                            className="object-cover"
-                            sizes="32px"
-                          />
-                        </div>
-                      )}
+                  <li key={exhibition._id} className="border-t border-gray-200">
+                    <Link href={`/exhibition/${exhibition._id}`} className="flex items-center p-3 hover:bg-gray-50">
+                      <Image src={exhibition.coverImage || '/images/placeholder-exhibition.svg'} alt={exhibition.title} width={48} height={48} className="w-12 h-12 rounded-md object-cover mr-4" />
                       <div>
                         <div className="font-medium text-gray-800">{exhibition.title}</div>
-                        <div className="text-xs text-gray-500">{exhibition.location.name}, {exhibition.location.city}</div>
+                        <div className="text-xs text-gray-500">{exhibition.location?.name}, {exhibition.location?.city}</div>
                       </div>
                     </Link>
                   </li>
