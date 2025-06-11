@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 // Endre denne importlinjen:
 import { authOptions } from '@/app/api/auth/options';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 
-export async function PUT(request) {
+export async function PUT(request: NextRequest) {
   try {
     // Get session data
     const session = await getServerSession(authOptions);
