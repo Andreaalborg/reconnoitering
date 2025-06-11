@@ -85,7 +85,7 @@ export async function POST(
     
     // Check if already in favorites
     const isAlreadyFavorite = user.favoriteExhibitions.some(
-      (favId) => favId.toString() === id
+      (favId: any) => favId.toString() === id
     );
     
     if (isAlreadyFavorite) {
@@ -183,7 +183,7 @@ export async function DELETE(
     
     const initialLength = user.favoriteExhibitions.length;
     user.favoriteExhibitions = user.favoriteExhibitions.filter(
-      (favId) => favId.toString() !== id
+      (favId: any) => favId.toString() !== id
     );
     
     // Only save if something changed
