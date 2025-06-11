@@ -73,8 +73,9 @@ export async function PUT(request: NextRequest) {
     
   } catch (error) {
     console.error('Error updating profile:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { success: false, error: 'Failed to update profile: ' + error.message },
+      { success: false, error: 'Failed to update profile: ' + errorMessage },
       { status: 500 }
     );
   }
