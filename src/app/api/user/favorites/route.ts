@@ -51,7 +51,7 @@ export async function GET() {
     }
     
     // Find user and populate favorite exhibitions
-    const user = await User.findOne({ email }).lean();
+    const user = await User.findOne({ email });
     
     if (!user) {
       console.log("User not found with email:", email);
@@ -72,7 +72,7 @@ export async function GET() {
     // Fetch exhibition details
     const favoriteExhibitions = await Exhibition.find({
       _id: { $in: user.favoriteExhibitions }
-    }).lean();
+    });
     
     console.log(`Found ${favoriteExhibitions.length} favorite exhibitions`);
     
