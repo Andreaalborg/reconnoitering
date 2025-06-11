@@ -232,7 +232,7 @@ function CalendarContent() {
           const newCityOptions = (data.meta.filter_options.cities || []).map((city: string) => ({ value: city, label: city }));
           setCityOptions(newCityOptions);
           setSelectedCity(prev => {
-            const isValid = newCityOptions.some(opt => opt.value === prev?.value);
+            const isValid = newCityOptions.some((opt: SelectOption) => opt.value === prev?.value);
             if (isValid) return prev; 
             if (!isValid && prev !== null) return null; 
             return prev; 
