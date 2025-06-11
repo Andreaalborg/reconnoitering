@@ -24,7 +24,7 @@ interface Exhibition {
   coverImage: string;
   startDate: string;
   endDate: string;
-  venue: any;
+  venue?: any;
   location: {
     name: string;
     city: string;
