@@ -36,7 +36,7 @@ const TagSchema: Schema = new Schema({
   }
 });
 
-TagSchema.pre('save', function(next) {
+TagSchema.pre<ITag>('save', function(next) {
   if (this.isModified('name')) {
     this.slug = this.name
       .toLowerCase()

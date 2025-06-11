@@ -279,14 +279,15 @@ export default function GoogleMap({
     }
     // Cleanup function
     return () => {
-      // Do NOT destroy the map instance here if using Fast Refresh/HMR
-      // Just clean up listeners and overlays
-      
-      // Check if google object and necessary sub-properties exist before clearing listeners
+      // Cleanup function to remove listeners
       if (window.google && window.google.maps && window.google.maps.event) {
           autocompleteRef.current?.unbind("bounds"); // Unbind autocomplete
-          google.maps.event.clearInstanceListeners(autocompleteRef.current); // Clear listeners
-          google.maps.event.clearInstanceListeners(mapInstanceRef.current); // Clear map listeners
+          if (autocompleteRef.current) {
+            google.maps.event.clearInstanceListeners(autocompleteRef.current); // Clear listeners
+          }
+          if (mapInstanceRef.current) {
+            google.maps.event.clearInstanceListeners(mapInstanceRef.current); // Clear map listeners
+          }
       } else {
           console.warn("Google Maps API not fully available during cleanup, skipping listener removal.");
       }

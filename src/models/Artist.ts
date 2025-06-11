@@ -40,7 +40,7 @@ const ArtistSchema: Schema = new Schema({
   }
 });
 
-ArtistSchema.pre('save', function(next) {
+ArtistSchema.pre<IArtist>('save', function(next) {
   if (this.isModified('name')) {
     this.slug = this.name
       .toLowerCase()

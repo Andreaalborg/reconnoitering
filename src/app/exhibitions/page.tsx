@@ -24,6 +24,7 @@ interface Exhibition {
   coverImage: string;
   startDate: string;
   endDate: string;
+  venue: any;
   location: {
     name: string;
     city: string;
@@ -134,7 +135,7 @@ function ExhibitionsContent() {
             
             // Re-apply initial city selection if applicable, now that options are loaded
             const initialCityValuesFromUrl = (searchParams.get('cities') || '').split(',').filter(Boolean);
-            setSelectedCities(fetchedCityOptions.filter(opt => initialCityValuesFromUrl.includes(opt.value)));
+            setSelectedCities(fetchedCityOptions.filter((opt: SelectOption) => initialCityValuesFromUrl.includes(opt.value)));
             
             // Update other dynamic filters
             setCategories(data.meta.filter_options.categories || []);

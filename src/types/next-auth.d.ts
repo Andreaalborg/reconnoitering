@@ -1,31 +1,32 @@
-import NextAuth from "next-auth"
-import { JWT } from "next-auth/jwt"
+import 'next-auth';
 
-declare module "next-auth" {
+declare module 'next-auth' {
+  /**
+   * Extends the built-in session.user object to include custom properties.
+   */
   interface Session {
     user: {
-      id: string
-      email: string
-      name?: string | null
-      image?: string | null
-      role: string
-    }
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: string; // Add your custom properties here
+    };
   }
 
+  /**
+   * Extends the built-in user object.
+   */
   interface User {
-    id: string
-    email: string
-    name?: string | null
-    image?: string | null
-    role: string
+    role?: string;
   }
 }
 
-declare module "next-auth/jwt" {
+declare module 'next-auth/jwt' {
+  /**
+   * Extends the built-in JWT token to include custom properties.
+   */
   interface JWT {
-    id: string
-    role: string
-    image?: string | null
-    picture?: string | null
+    role?: string;
   }
 } 

@@ -1,7 +1,20 @@
-import mongoose from 'mongoose';
+import mongoose, { Mongoose } from 'mongoose';
 
-// TEMPORARY SOLUTION - REPLACE WITH ENV VAR LATER
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://intsenai:20fNK8j2r8MQhHD3@cluster0.34dwe.mongodb.net/?retryWrites=true&w=majority';
+
+if (!MONGODB_URI) {
+  throw new Error(
+    'Please define the MONGODB_URI environment variable inside .env.local'
+  );
+}
+
+// Augment the NodeJS.Global interface to include mongoose
+declare global {
+  var mongoose: {
+    promise: Promise<Mongoose> | null;
+    conn: Mongoose | null;
+  };
+}
 
 /**
  * Global is used here to maintain a cached connection across hot reloads

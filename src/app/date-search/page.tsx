@@ -124,7 +124,7 @@ function DateSearchContent() {
 
         // --- Validate and potentially clear existing selections (Smarter Check) --- 
         setSelectedCities(prev => {
-            const validSelected = prev.filter(selected => newCityOptions.some(opt => opt.value === selected.value));
+            const validSelected = prev.filter(selected => newCityOptions.some((opt: SelectOption) => opt.value === selected.value));
             // Only update if the array content actually changed (simple length/value check)
             if (validSelected.length !== prev.length || !validSelected.every((v, i) => v.value === prev[i]?.value)) {
                 return validSelected;
@@ -132,13 +132,13 @@ function DateSearchContent() {
             return prev; // Keep previous state reference if no change
         });
         setSelectedCategory(prev => {
-            const isValid = newCategoryOptions.some(opt => opt.value === prev?.value);
+            const isValid = newCategoryOptions.some((opt: SelectOption) => opt.value === prev?.value);
             if (isValid) return prev; // Keep if valid
             if (!isValid && prev !== null) return null; // Clear if invalid and was not already null
             return prev; // Keep null if it was already null
         });
          setSelectedArtist(prev => {
-            const isValid = newArtistOptions.some(opt => opt.value === prev?.value);
+            const isValid = newArtistOptions.some((opt: SelectOption) => opt.value === prev?.value);
             if (isValid) return prev; // Keep if valid
             if (!isValid && prev !== null) return null; // Clear if invalid and was not already null
             return prev; // Keep null if it was already null

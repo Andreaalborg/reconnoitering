@@ -4,21 +4,6 @@ import { compare } from 'bcryptjs';
 import dbConnect from './mongodb';
 import User from '@/models/User';
 
-// Legg til type for session
-declare module 'next-auth' {
-  interface User {
-    role?: string;
-  }
-  interface Session {
-    user?: {
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      role?: string;
-    };
-  }
-}
-
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -74,10 +59,9 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.image = token.picture || token.image;
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     }
