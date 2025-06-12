@@ -1,6 +1,5 @@
 'use client';
-export const dynamic = 'force-dynamic';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
@@ -256,11 +255,7 @@ export default function Home() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Suspense fallback={<div className="flex justify-center items-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
-        </div>}>
-          <HomeContent />
-        </Suspense>
+        <HomeContent />
       </main>
       
       <footer className="bg-white border-t border-gray-200 py-8">

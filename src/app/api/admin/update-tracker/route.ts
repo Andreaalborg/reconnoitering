@@ -1,4 +1,5 @@
 // src/app/api/admin/update-tracker/route.ts
+export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
