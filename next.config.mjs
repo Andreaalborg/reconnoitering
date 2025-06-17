@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    // Ignoring TypeScript errors during the build process
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    // Ignoring ESLint errors during the build process
-    ignoreDuringBuilds: true,
-  },
+  // typescript: {
+  //   // Ignoring TypeScript errors during the build process
+  //   ignoreBuildErrors: true,
+  // },
+  // eslint: {
+  //   // Ignoring ESLint errors during the build process
+  //   ignoreDuringBuilds: true,
+  // },
   images: {
     domains: [
       'picsum.photos',

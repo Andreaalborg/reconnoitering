@@ -28,13 +28,17 @@ function MapPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [initialCenterSet, setInitialCenterSet] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setMapCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
+          const userCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
+          console.log("Geolocation success:", userCoords);
+          setMapCenter(userCoords);
+          setUserPosition(userCoords);
           setInitialCenterSet(true); 
         },
         (error) => {
@@ -132,6 +136,7 @@ function MapPageContent() {
                 center={mapCenter}
                 zoom={12}
                 markers={mapMarkers}
+                userPosition={userPosition}
                 showSearchBox={true}
                 onPlaceSelected={handlePlaceSelected}
                 height="600px"

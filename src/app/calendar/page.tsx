@@ -117,99 +117,68 @@ function CalendarContent() {
     typeof window !== 'undefined' ? window.location.search : ''
   );
   
-  // --- Updated State --- 
-  const [year, setYear] = useState<number>(
-    parseInt(searchParams.get('year') || currentYear.toString())
-  );
-  const [month, setMonth] = useState<number>(
-    parseInt(searchParams.get('month') || currentMonth.toString())
-  );
-  const [selectedCountries, setSelectedCountries] = useState<SelectOption[]>([]); // Added for countries
-  const [cityOptions, setCityOptions] = useState<SelectOption[]>([]); // Added for city options
-  const [selectedCity, setSelectedCity] = useState<SelectOption | null>(null); // Changed to SelectOption or null
-  
+  // --- Refactored State Management ---
+  const [view, setView] = useState({ year: currentYear, month: currentMonth });
+  const [filters, setFilters] = useState<{ countries: SelectOption[], city: SelectOption | null }>({
+    countries: [],
+    city: null
+  });
+
   const [calendarCells, setCalendarCells] = useState<CalendarCell[]>([]);
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
+  const [cityOptions, setCityOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // --- Updated useEffect (Simplified Dependencies) ---
+
+  // --- Effect for Initial Load ---
+  // Runs only once to set the initial state from URL search params.
   useEffect(() => {
-    // This effect now ONLY runs when year or month changes.
-    // It's responsible for updating the cells and fetching data for the new view.
-
-    console.log(`useEffect for [year, month] triggered: ${year}-${month}`); // Debug log
-
-    const cells = getMonthDates(year, month);
-    setCalendarCells(cells);
-
-    // Update URL reflecting the current VIEW (year, month) and FILTERS (read from state)
-    const params = new URLSearchParams();
-    params.set('year', year.toString());
-    params.set('month', month.toString());
-    // Read current filter state when updating URL
-    if (selectedCountries.length > 0) params.set('countries', selectedCountries.map(c => c.value).join(','));
-    if (selectedCity) params.set('city', selectedCity.value);
-    
-    if (typeof window !== 'undefined') {
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        // Use replaceState for view changes to avoid excessive history
-        window.history.replaceState({ path: newUrl }, '', newUrl); 
-    }
-
-    // Fetch exhibitions for the NEW view (year/month) using CURRENT filters
-    if (cells.length > 0) {
-        const startDate = cells[0].date;
-        const endDate = cells[cells.length - 1].date;
-        fetchExhibitions(startDate, endDate, selectedCountries.map(c => c.value), selectedCity?.value || null);
-    }
-
-  // Depend ONLY on year and month for view changes
-  }, [year, month]); // REMOVED selectedCountries, selectedCity
-
-  // --- Initial Load Effect (Separate, runs once) ---
-  useEffect(() => {
-    console.log("Initial load useEffect triggered"); // Debug log
-    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    console.log("Initial load: setting state from URL");
+    const searchParams = new URLSearchParams(window.location.search);
     const initialYear = parseInt(searchParams.get('year') || currentYear.toString());
     const initialMonth = parseInt(searchParams.get('month') || currentMonth.toString());
     const initialCountryValues = (searchParams.get('countries') || '').split(',').filter(Boolean);
     const initialCityValue = searchParams.get('city') || null;
 
-    // Set initial view state ONLY if different from default
-    let viewChanged = false;
-    if (initialYear !== currentYear) {
-      setYear(initialYear);
-      viewChanged = true;
-    }
-    if (initialMonth !== currentMonth) {
-      setMonth(initialMonth);
-      viewChanged = true;
-    }
-
-    // Set initial filter state REGARDLESS of view change
+    setView({ year: initialYear, month: initialMonth });
+    
     const initialCountries = europeanCountryOptions.filter(opt => initialCountryValues.includes(opt.value));
-    setSelectedCountries(initialCountries);
-    // Set temporary city state before fetch validates
-    setSelectedCity(initialCityValue ? { value: initialCityValue, label: initialCityValue } : null);
-
-    // Generate initial cells based on initial/default view
-    const cells = getMonthDates(initialYear, initialMonth);
-    setCalendarCells(cells);
-
-    // Initial fetch logic:
-    // If viewChanged is true, the other useEffect [year, month] will trigger the fetch.
-    // If view hasn't changed, we need to trigger the fetch manually here with initial filters.
-    if (!viewChanged && cells.length > 0) {
-        console.log("Initial view matches state, fetching manually with initial filters");
-        const startDate = cells[0].date;
-        const endDate = cells[cells.length - 1].date;
-        fetchExhibitions(startDate, endDate, initialCountries.map(c => c.value), initialCityValue);
-    }
+    setFilters({
+      countries: initialCountries,
+      city: initialCityValue ? { value: initialCityValue, label: initialCityValue } : null
+    });
+    
+    // The main data fetching effect will now be triggered by this state change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this runs only once on mount
-  
-  // --- Updated fetchExhibitions (Validation logic remains the same) --- 
+  }, []);
+
+  // --- Main Data Fetching and URL Update Effect ---
+  // This is the single source of truth for fetching data.
+  // It runs whenever the view (year, month) or filters (countries, city) change.
+  useEffect(() => {
+    console.log("Data fetching effect triggered by view or filter change", { view, filters });
+
+    const cells = getMonthDates(view.year, view.month);
+    setCalendarCells(cells);
+    
+    // Update URL to reflect the new state
+    const params = new URLSearchParams();
+    params.set('year', view.year.toString());
+    params.set('month', view.month.toString());
+    if (filters.countries.length > 0) params.set('countries', filters.countries.map(c => c.value).join(','));
+    if (filters.city) params.set('city', filters.city.value);
+    window.history.replaceState({ path: `${window.location.pathname}?${params.toString()}` }, '', `${window.location.pathname}?${params.toString()}`);
+
+    // Fetch exhibitions based on the current view and filters
+    if (cells.length > 0) {
+      const startDate = cells[0].date;
+      const endDate = cells[cells.length - 1].date;
+      fetchExhibitions(startDate, endDate, filters.countries.map(c => c.value), filters.city?.value || null);
+    }
+  }, [view, filters]);
+
+  // --- API Call Function ---
+  // This function NO LONGER sets state directly. It returns data.
   const fetchExhibitions = async (startDate: Date, endDate: Date, countryValues: string[], cityValue: string | null) => {
     setLoading(true);
     setError(null);
@@ -221,25 +190,21 @@ function CalendarContent() {
       if (cityValue) params.set('city', cityValue);
       
       const apiUrl = `/api/exhibitions?${params.toString()}`;
-      console.log("Fetching exhibitions for calendar from:", apiUrl);
+      console.log("Fetching exhibitions from:", apiUrl);
       const response = await fetch(apiUrl);
       if (!response.ok) throw new Error('Failed to fetch exhibitions');
-      const data = await response.json();
       
+      const data = await response.json();
       if (data.success) {
         setExhibitions(data.data);
-        if (data.meta?.filter_options) {
-          const newCityOptions = (data.meta.filter_options.cities || []).map((city: string) => ({ value: city, label: city }));
-          setCityOptions(newCityOptions);
-          setSelectedCity(prev => {
-            const isValid = newCityOptions.some((opt: SelectOption) => opt.value === prev?.value);
-            if (isValid) return prev; 
-            if (!isValid && prev !== null) return null; 
-            return prev; 
-          });
-        } else {
-            setCityOptions([]); 
-            setSelectedCity(null); 
+        const newCityOptions = (data.meta?.filter_options?.cities || []).map((city: string) => ({ value: city, label: city }));
+        setCityOptions(newCityOptions);
+
+        // Validate city filter based on new options
+        const isCurrentCityValid = newCityOptions.some((opt: SelectOption) => opt.value === cityValue);
+        if (!isCurrentCityValid && cityValue) {
+          // If city is no longer valid, we update the filter state, which will trigger a refetch.
+          setFilters(prev => ({ ...prev, city: null }));
         }
       } else {
         throw new Error(data.error || 'Failed to fetch exhibitions');
@@ -252,23 +217,22 @@ function CalendarContent() {
     }
   };
   
-  // --- Navigation functions (remain the same) --- 
+  // --- Navigation functions --- 
+  // These now update the 'view' state object.
   const goToPreviousMonth = () => {
-    if (month > 0) {
-      setMonth(month - 1);
-    } else {
-      setYear(year - 1);
-      setMonth(11); // December
-    }
+    setView(prev => {
+      const newMonth = prev.month > 0 ? prev.month - 1 : 11;
+      const newYear = prev.month > 0 ? prev.year : prev.year - 1;
+      return { year: newYear, month: newMonth };
+    });
   };
   
   const goToNextMonth = () => {
-    if (month < 11) {
-      setMonth(month + 1);
-    } else {
-      setYear(year + 1);
-      setMonth(0); // January
-    }
+    setView(prev => {
+      const newMonth = prev.month < 11 ? prev.month + 1 : 0;
+      const newYear = prev.month < 11 ? prev.year : prev.year + 1;
+      return { year: newYear, month: newMonth };
+    });
   };
   
   // Helper function to get exhibitions for a specific date (remains the same)
@@ -294,51 +258,15 @@ function CalendarContent() {
       return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
-  // --- Updated Handlers to trigger fetch and URL update --- 
+  // --- Event Handlers ---
+  // These now update the 'filters' state object.
   const handleCountryChange = (selectedOptions: readonly SelectOption[] | null) => {
-      const optionsArray = selectedOptions ? Array.from(selectedOptions) : [];
-      console.log("Country changed, setting state and fetching..."); // Debug log
-      setSelectedCountries(optionsArray);
-      setSelectedCity(null); // Clear city
-
-      // Update URL immediately
-      const params = new URLSearchParams(window.location.search);
-      if (optionsArray.length > 0) params.set('countries', optionsArray.map(c => c.value).join(','));
-      else params.delete('countries');
-      params.delete('city'); // City was cleared
-      window.history.pushState({ path: `${window.location.pathname}?${params.toString()}` }, '', `${window.location.pathname}?${params.toString()}`);
-
-      // Manually trigger fetch after state updates, using current cells
-      const cells = calendarCells; 
-      if (cells.length > 0) {
-          const startDate = cells[0].date;
-          const endDate = cells[cells.length - 1].date;
-          fetchExhibitions(startDate, endDate, optionsArray.map(c => c.value), null); // Fetch with new countries, null city
-      } else {
-          console.warn("Cannot fetch, calendar cells not ready.");
-      }
+    const optionsArray = selectedOptions ? Array.from(selectedOptions) : [];
+    setFilters({ countries: optionsArray, city: null }); // Reset city when country changes
   };
 
   const handleCityChange = (selectedOption: SelectOption | null) => {
-      console.log("City changed, setting state and fetching..."); // Debug log
-      setSelectedCity(selectedOption);
-
-      // Update URL immediately
-      const params = new URLSearchParams(window.location.search);
-      if (selectedOption) params.set('city', selectedOption.value);
-      else params.delete('city');
-      window.history.pushState({ path: `${window.location.pathname}?${params.toString()}` }, '', `${window.location.pathname}?${params.toString()}`);
-
-      // Manually trigger fetch after state updates, using current cells
-      const cells = calendarCells; 
-      if (cells.length > 0) {
-          const startDate = cells[0].date;
-          const endDate = cells[cells.length - 1].date;
-          // Fetch with current countries and new city
-          fetchExhibitions(startDate, endDate, selectedCountries.map(c => c.value), selectedOption?.value || null);
-      } else {
-          console.warn("Cannot fetch, calendar cells not ready.");
-      }
+    setFilters(prev => ({ ...prev, city: selectedOption }));
   };
 
   return (
@@ -353,7 +281,7 @@ function CalendarContent() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
               </button>
               <div className="text-lg font-medium text-center w-32">
-                 {formatHeaderDate(year, month)}
+                 {formatHeaderDate(view.year, view.month)}
               </div>
               <button onClick={goToNextMonth} className="p-2 rounded-full hover:bg-gray-100" aria-label="Next month">
                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
@@ -366,7 +294,7 @@ function CalendarContent() {
                <label htmlFor="countries-select" className="block text-sm font-medium text-gray-700 mb-1">Filter by Country</label>
                <Select<SelectOption, true> 
                  id="countries-select" instanceId="countries-select-instance" isMulti
-                 options={europeanCountryOptions} value={selectedCountries} 
+                 options={europeanCountryOptions} value={filters.countries} 
                  onChange={handleCountryChange} 
                  placeholder="All European Countries..."
                  className="react-select-container"
@@ -378,10 +306,10 @@ function CalendarContent() {
                <label htmlFor="city-select" className="block text-sm font-medium text-gray-700 mb-1">Filter by City</label>
                <Select<SelectOption> 
                  id="city-select" instanceId="city-select-instance" 
-                 options={cityOptions} value={selectedCity} 
+                 options={cityOptions} value={filters.city} 
                  onChange={handleCityChange} 
                  isClearable={true} placeholder="All Cities..." 
-                 noOptionsMessage={() => selectedCountries.length === 0 ? 'Select country first' : 'No cities found'}
+                 noOptionsMessage={() => filters.countries.length === 0 ? 'Select country first' : 'No cities found'}
                  isDisabled={loading}
                  className="react-select-container"
                  classNamePrefix="react-select"
@@ -426,7 +354,7 @@ function CalendarContent() {
                                     key={exhibition._id} 
                                     href={`/exhibition/${exhibition._id}`}
                                     className="block text-xs leading-snug px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 truncate"
-                                    title={`${exhibition.title} (${exhibition.location.name})`}
+                                    title={`${exhibition.title} (${exhibition.location ? exhibition.location.name : 'Unknown Location'})`}
                                 >
                                   {exhibition.title}
                                 </Link>

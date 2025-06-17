@@ -6,194 +6,124 @@ import { authOptions } from '@/app/api/auth/options';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Exhibition from '@/models/Exhibition';
-import Artist from '@/models/Artist';
-import Tag from '@/models/Tag';
-import Venue from '@/models/Venue';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get session data
     const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user || !session.user.email) {
-      return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
-        { status: 401 }
-      );
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
-    
-    // Connect to database
+
     await dbConnect();
     
-    // Find user by email
-    const user = await User.findOne({ email: session.user.email });
-    
+    // Ensure models are registered to avoid issues in serverless environments
+    const UserModel = mongoose.models.User || mongoose.model('User', User.schema);
+    const ExhibitionModel = mongoose.models.Exhibition || mongoose.model('Exhibition', Exhibition.schema);
+
+    const user = await UserModel.findById(session.user.id);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
-    
-    // Get user preferences
-    const preferences = user.preferences || {};
+
     const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '6');
+    const preferences = user.preferences || {};
+
+    const query: any = {
+      // Ensure we only recommend exhibitions that are currently running or upcoming
+      endDate: { $gte: new Date() } 
+    };
     
-    // Build query based on preferences and any additional filters
-    const query: any = {};
-    
-    // Filter by date range (if provided)
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    
-    if (startDate || endDate) {
-      query.$and = [];
+    // Build the aggregation pipeline
+    const pipeline: any[] = [{ $match: query }];
+
+    // If user has preferences, calculate a recommendation score
+    if (Object.keys(preferences).length > 0 && (preferences.preferredTags?.length || preferences.preferredArtists?.length || preferences.preferredLocations?.length)) {
       
-      if (startDate) {
-        query.$and.push({ endDate: { $gte: new Date(startDate) } });
+      const addFieldsStage: any = {
+        recommendationScore: { $add: [] }
+      };
+
+      // Score based on tags
+      if (preferences.preferredTags?.length) {
+        addFieldsStage.recommendationScore.$add.push(
+          { $multiply: [{ $size: { $ifNull: [{ $setIntersection: ['$tags', preferences.preferredTags] }, []] } }, 2] }
+        );
       }
       
-      if (endDate) {
-        query.$and.push({ startDate: { $lte: new Date(endDate) } });
+      // Score based on artists
+      if (preferences.preferredArtists?.length) {
+        addFieldsStage.recommendationScore.$add.push(
+          { $size: { $ifNull: [{ $setIntersection: ['$artists', preferences.preferredArtists] }, []] } }
+        );
       }
-    }
+      
+      // Score based on location
+      if (preferences.preferredLocations?.length) {
+        addFieldsStage.recommendationScore.$add.push(
+          { $cond: [{ $in: ['$location.city', preferences.preferredLocations] }, 1, 0] }
+        );
+      }
+      
+      pipeline.push({ $addFields: addFieldsStage });
+      pipeline.push({ $sort: { recommendationScore: -1, startDate: 1 } });
     
-    // Apply preferences
-    const matchScoreFields: any = {};
-    
-    // Preferred tags (boost score for matches)
-    if (preferences.preferredTags && preferences.preferredTags.length > 0) {
-      matchScoreFields.preferredTagMatch = {
-        $size: {
-          $setIntersection: ['$tags', preferences.preferredTags]
-        }
-      };
-    }
-    
-    // Preferred artists (boost score for matches)
-    if (preferences.preferredArtists && preferences.preferredArtists.length > 0) {
-      matchScoreFields.preferredArtistMatch = {
-        $size: {
-          $setIntersection: ['$artists', preferences.preferredArtists]
-        }
-      };
-    }
-    
-    // Preferred locations (boost score for matches)
-    if (preferences.preferredLocations && preferences.preferredLocations.length > 0) {
-      // Add a $or query for location matches
-      query.$or = [
-        { 'location.city': { $in: preferences.preferredLocations } },
-        { 'location.country': { $in: preferences.preferredLocations } }
-      ];
-    }
-    
-    // Excluded tags (filter out unwanted tags)
-    if (preferences.excludedTags && preferences.excludedTags.length > 0) {
-      query.tags = { $nin: preferences.excludedTags };
-    }
-    
-    // City filter (if provided)
-    const city = searchParams.get('city');
-    if (city) {
-      query['location.city'] = city;
-    }
-    
-    // Tag filter (if provided)
-    const tag = searchParams.get('tag');
-    if (tag) {
-      query.tags = tag;
-    }
-    
-    // Artist filter (if provided)
-    const artist = searchParams.get('artist');
-    if (artist) {
-      query.artists = artist;
-    }
-    
-    // Limit and skip for pagination
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = parseInt(searchParams.get('skip') || '0');
-    
-    // Fetch exhibitions and calculate recommendation score
-    let exhibitions;
-    
-    if (Object.keys(matchScoreFields).length > 0) {
-      // Calculate recommendation score based on preferences
-      exhibitions = await Exhibition.aggregate([
-        { $match: query },
-        {
-          $addFields: matchScoreFields
-        },
-        {
-          $addFields: {
-            // Calculate recommendation score (higher is better)
-            recommendationScore: {
-              $sum: [
-                { $multiply: [{ $ifNull: ['$preferredTagMatch', 0] }, 2] }, // Tags vektes høyere
-                { $ifNull: ['$preferredArtistMatch', 0] },
-                { $cond: [{ $in: ['$location.city', preferences.preferredLocations || []] }, 1, 0] }
-              ]
-            }
-          }
-        },
-        { $sort: { recommendationScore: -1, startDate: 1 } },
-        { $skip: skip },
-        { $limit: limit },
-        // Populate venue, tags og artists
-        {
-          $lookup: {
-            from: 'venues',
-            localField: 'venue',
-            foreignField: '_id',
-            as: 'venue'
-          }
-        },
-        { $unwind: '$venue' },
-        {
-          $lookup: {
-            from: 'tags',
-            localField: 'tags',
-            foreignField: '_id',
-            as: 'tags'
-          }
-        },
-        {
-          $lookup: {
-            from: 'artists',
-            localField: 'artists',
-            foreignField: '_id',
-            as: 'artists'
-          }
-        }
-      ]);
     } else {
-      // If no preferences are set, just sort by date
-      exhibitions = await Exhibition.find(query)
-        .populate('venue')
-        .populate('tags')
-        .populate('artists')
-        .sort({ startDate: 1 })
-        .skip(skip)
-        .limit(limit);
+      // Default sort for users without preferences
+      pipeline.push({ $sort: { popularity: -1, startDate: 1 } });
     }
+
+    // Add pagination and projection
+    pipeline.push({ $limit: limit });
     
-    // Get total count for pagination
-    const total = await Exhibition.countDocuments(query);
+    // Lookup venue information
+    pipeline.push({
+      $lookup: {
+        from: 'venues',
+        localField: 'venue',
+        foreignField: '_id',
+        as: 'venueInfo'
+      }
+    });
     
+    // Use $unwind in a safer way, with an option to preserve documents that don't have a venue
+    pipeline.push({
+      $unwind: {
+        path: '$venueInfo',
+        preserveNullAndEmptyArrays: true
+      }
+    });
+    
+    // Replace the original venue ID with the populated venue document
+    pipeline.push({
+      $addFields: {
+        venue: '$venueInfo'
+      }
+    });
+    
+    // Remove the temporary venueInfo field
+    pipeline.push({
+      $project: {
+        venueInfo: 0
+      }
+    });
+
+    const exhibitions = await ExhibitionModel.aggregate(pipeline);
+
     return NextResponse.json({
       success: true,
       data: exhibitions,
       meta: {
-        total,
-        hasPreferences: Object.keys(matchScoreFields).length > 0
+        total: exhibitions.length,
+        hasPreferences: Object.keys(preferences).length > 0
       }
     });
-    
+
   } catch (error: any) {
-    console.error('Error fetching recommendations:', error);
+    console.error('Error in /api/recommendation:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch recommendations: ' + error.message },
+      { success: false, error: 'Failed to fetch recommendations', details: error.message },
       { status: 500 }
     );
   }

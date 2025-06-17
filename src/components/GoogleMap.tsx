@@ -23,6 +23,7 @@ interface GoogleMapProps {
   center?: { lat: number; lng: number };
   zoom?: number;
   markers?: MapMarker[]; // Use the defined MapMarker interface
+  userPosition?: { lat: number; lng: number }; // New prop for user's location
   mainMarker?: MapMarker; // Add prop for a single, primary marker (e.g., for editing)
   isMainMarkerDraggable?: boolean;
   onMainMarkerDragEnd?: (location: { lat: number; lng: number }) => void;
@@ -39,6 +40,7 @@ export default function GoogleMap({
   center = { lat: 59.9139, lng: 10.7522 }, // Default center Oslo
   zoom = 13,
   markers = [],
+  userPosition,
   mainMarker,
   isMainMarkerDraggable = false,
   onMainMarkerDragEnd,
@@ -53,6 +55,7 @@ export default function GoogleMap({
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const markerRefs = useRef<{ [key: string]: google.maps.Marker }>({});
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
   const mainMarkerRef = useRef<google.maps.Marker | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const polylineRefs = useRef<google.maps.Polyline[]>([]);
@@ -119,6 +122,32 @@ export default function GoogleMap({
         });
     }
   }, []); // Removed infoWindowRef from dependencies as it's stable after init
+
+  // Function to draw or update the user's position marker
+  const updateUserMarker = useCallback((map: google.maps.Map | null) => {
+    if (!map) return;
+    
+    // Clear existing user marker
+    userMarkerRef.current?.setMap(null);
+    userMarkerRef.current = null;
+
+    if (userPosition) {
+      userMarkerRef.current = new google.maps.Marker({
+        position: userPosition,
+        map,
+        title: 'Your Location',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#4285F4', // Google Blue
+          fillOpacity: 1,
+          strokeColor: 'white',
+          strokeWeight: 2,
+        },
+        zIndex: 1000, // Ensure it's on top
+      });
+    }
+  }, [userPosition]);
 
   // Function to create or update the main, single marker
   const updateMainMarker = useCallback((map: google.maps.Map | null) => {
@@ -242,6 +271,7 @@ export default function GoogleMap({
       // --- Initial drawing --- 
       drawPolylines(map);
       markers.forEach(marker => addMarker(marker, map));
+      updateUserMarker(map);
       if (mainMarker) {
         updateMainMarker(map);
       }
@@ -250,7 +280,7 @@ export default function GoogleMap({
       console.error('Error initializing map:', error);
     }
   // Update dependencies: remove outdated refs, keep necessary state/props
-  }, [apiKey, center, zoom, onClick, onDragEnd, showSearchBox, onPlaceSelected, drawPolylines, addMarker, updateMainMarker, mainMarker, markers]); // Added marker/mainMarker to re-init if they change drastically at start?
+  }, [apiKey, center, zoom, onClick, onDragEnd, showSearchBox, onPlaceSelected, drawPolylines, addMarker, updateUserMarker, updateMainMarker, mainMarker, markers]); // Added marker/mainMarker to re-init if they change drastically at start?
 
   // Update markers dynamically
   useEffect(() => {
@@ -265,6 +295,12 @@ export default function GoogleMap({
     if (!mapInstanceRef.current) return;
       drawPolylines(mapInstanceRef.current);
   }, [polylines, drawPolylines]);
+
+  // Update user position marker dynamically
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    updateUserMarker(mapInstanceRef.current);
+  }, [userPosition, updateUserMarker]);
 
   // Update main marker dynamically
   useEffect(() => {
@@ -296,6 +332,8 @@ export default function GoogleMap({
       markerRefs.current = {};
       polylineRefs.current.forEach(p => p.setMap(null));
       polylineRefs.current = [];
+      userMarkerRef.current?.setMap(null);
+      userMarkerRef.current = null;
       mainMarkerRef.current?.setMap(null);
       mainMarkerRef.current = null;
       infoWindowRef.current?.close();

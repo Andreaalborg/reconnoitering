@@ -45,6 +45,14 @@ export async function GET(request: NextRequest) {
       query.$text = { $search: searchText };
     }
     
+    // --- Upcoming Filter ---
+    const upcoming = searchParams.get('upcoming');
+    if (upcoming === 'true') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to the beginning of today
+      query.startDate = { $gte: today };
+    }
+    
     // Apply selected countries filter (overrides base Europe filter if present)
     let selectedCountryValues: string[] = [];
     const countriesParam = searchParams.get('countries');

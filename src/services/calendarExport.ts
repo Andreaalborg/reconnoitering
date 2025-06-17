@@ -134,12 +134,22 @@ interface CalendarEvent {
     const endDate = new Date(exhibition.endDate);
     endDate.setHours(18, 0, 0, 0);
   
-    // Format location
-    const location = `${exhibition.location.name}, ${exhibition.location.address || ''}, ${exhibition.location.city}, ${exhibition.location.country}`.trim().replace(/,\s*,/g, ',');
+    // Format location with null checks
+    let location = 'Location not specified';
+    if (exhibition.location) {
+      const locationParts = [
+        exhibition.location.name,
+        exhibition.location.address,
+        exhibition.location.city,
+        exhibition.location.country
+      ].filter(part => part && part.trim()); // Remove empty/null parts
+      
+      location = locationParts.join(', ');
+    }
   
     // Create event object
     const event: CalendarEvent = {
-      title: exhibition.title,
+      title: exhibition.title || 'Exhibition',
       description: exhibition.description || '',
       location,
       startDate,
@@ -151,7 +161,7 @@ interface CalendarEvent {
     const icalContent = generateICalEvent(event);
     
     // Create filename
-    const filename = `exhibition_${exhibition.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+    const filename = `exhibition_${(exhibition.title || 'exhibition').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
     
     // Trigger download
     const downloadUrl = generateCalendarDownloadUrl(icalContent);
@@ -185,7 +195,17 @@ interface CalendarEvent {
         endDate.setHours(endHour, endMinute, 0, 0);
         
         // Format location
-        const location = `${exhibition.location.name}, ${exhibition.location.address || ''}, ${exhibition.location.city}, ${exhibition.location.country}`.trim().replace(/,\s*,/g, ',');
+        let location = 'Location not specified';
+        if (exhibition.location) {
+          const locationParts = [
+            exhibition.location.name,
+            exhibition.location.address,
+            exhibition.location.city,
+            exhibition.location.country
+          ].filter(part => part && part.trim()); // Remove empty/null parts
+          
+          location = locationParts.join(', ');
+        }
         
         // Create event description
         let description = exhibition.description || '';
@@ -194,7 +214,7 @@ interface CalendarEvent {
         }
         
         return {
-          title: exhibition.title,
+          title: exhibition.title || 'Exhibition',
           description,
           location,
           startDate,

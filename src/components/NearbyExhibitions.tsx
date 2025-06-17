@@ -77,9 +77,12 @@ export default function NearbyExhibitionsPage() {
         
         // Filter exhibitions with coordinates and calculate distance
         const exhibitionsWithDistance = allExhibitions
-          .filter(ex => ex.location.coordinates && 
-                  ex.location.coordinates.lat && 
-                  ex.location.coordinates.lng)
+          .filter(ex => ex.location && 
+                  ex.location.coordinates && 
+                  ex.location.coordinates.lat !== undefined && 
+                  ex.location.coordinates.lng !== undefined &&
+                  typeof ex.location.coordinates.lat === 'number' &&
+                  typeof ex.location.coordinates.lng === 'number')
           .map(ex => {
             const distance = calculateDistance(
               userLocation.lat,

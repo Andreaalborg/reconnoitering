@@ -103,7 +103,7 @@ function SearchContent() {
         {searchQuery && (
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-800">
-              Search results for "{searchQuery}"
+              Search results for &quot;{searchQuery}&quot;
             </h2>
           </div>
         )}
@@ -120,7 +120,7 @@ function SearchContent() {
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <h3 className="text-xl font-semibold mb-2">No results found</h3>
             <p className="text-gray-600 mb-6">
-              We couldn't find any exhibitions matching your search term. Try different keywords or browse all exhibitions.
+              We couldn&apos;t find any exhibitions matching your search term. Try different keywords or browse all exhibitions.
             </p>
             <Link
               href="/exhibitions"

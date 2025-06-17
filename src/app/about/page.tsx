@@ -30,7 +30,7 @@ export default function AboutPage() {
             <h2 className="text-2xl font-bold mb-4">Our Mission</h2>
             <p className="text-gray-700 mb-4">
               Reconnoitering aims to help art enthusiasts discover exhibitions worldwide based on their travel plans. 
-              We understand the frustration of missing great exhibitions because you didn't know they were happening 
+              We understand the frustration of missing great exhibitions because you didn&apos;t know they were happening 
               during your visit to a city.
             </p>
             <p className="text-gray-700">
@@ -65,7 +65,7 @@ export default function AboutPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
             <p className="text-gray-700 mb-4">
-              Have questions, suggestions, or want to list your exhibition on our platform? We'd love to hear from you!
+              Have questions, suggestions, or want to list your exhibition on our platform? We&apos;d love to hear from you!
             </p>
             <a 
               href="mailto:contact@reconnoitering.com" 
