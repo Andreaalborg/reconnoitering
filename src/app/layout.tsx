@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import NextAuthProvider from "@/components/NextAuthProvider";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: '--font-sans',
-});
 
 export const metadata: Metadata = {
   title: "Reconnoitering - Art Exhibitions Worldwide",
@@ -19,9 +12,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en">
       <body>
-        <NextAuthProvider>{children}</NextAuthProvider>
+        <div style={{ padding: "20px", backgroundColor: "lightblue" }}>
+          <h1>DEBUG: Layout is rendering</h1>
+          {children}
+        </div>
       </body>
     </html>
   );

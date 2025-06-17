@@ -1,0 +1,42 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // typescript: {
+  //   // Ignoring TypeScript errors during the build process
+  //   ignoreBuildErrors: true,
+  // },
+  // eslint: {
+  //   // Ignoring ESLint errors during the build process
+  //   ignoreDuringBuilds: true,
+  // },
+  images: {
+    domains: [
+      'picsum.photos',
+      'artsandculture.google.com',
+      'images.unsplash.com',
+      'source.unsplash.com',
+      'upload.wikimedia.org'
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'source.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      }
+    ],
+  },
+  // Turn off output export which requires static parameters
+  // output: 'standalone', // Fjernet for Vercel-kompatibilitet
+  // Use experimental options that work with Next.js 15
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    }
+  }
+};
+
+export default nextConfig;
