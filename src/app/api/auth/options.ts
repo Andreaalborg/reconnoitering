@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     }
   },
-  secret: "THIS_IS_A_VERY_SECURE_SECRET_FOR_RECONNOITERING_APP",
+  secret: process.env.NEXTAUTH_SECRET || "THIS_IS_A_VERY_SECURE_SECRET_FOR_RECONNOITERING_APP",
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 dager
