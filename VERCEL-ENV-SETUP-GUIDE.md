@@ -49,7 +49,7 @@ Du vil se en side med:
 
 **Variabel 4:**
 - Key: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
-- Value: `AIzaSyDq1AmMNQKpXR44TUVgsohjpcO7XiZcvnM`
+- Value: `YOUR_GOOGLE_MAPS_API_KEY_HERE`
 - Environment: ✅ Production, ✅ Preview, ✅ Development
 
 ## 6. Lagre hver variabel

@@ -45,7 +45,7 @@ Environment: ✓ Production, ✓ Preview, ✓ Development
 Sørg for at den eksisterende variabelen er:
 ```
 Key: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-Value: AIzaSyDq1AmMNQKpXR44TUVgsohjpcO7XiZcvnM
+Value: [YOUR_EXISTING_API_KEY_FROM_VERCEL]
 ```
 
 ## Steg 3: Slett det andre prosjektet

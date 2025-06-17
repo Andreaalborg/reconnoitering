@@ -55,7 +55,7 @@ På prosjektet du beholder:
 ```
 MONGODB_URI=mongodb+srv://intsenai:20fNK8j2r8MQhHD3@cluster0.34dwe.mongodb.net/?retryWrites=true&w=majority
 NEXTAUTH_SECRET=THIS_IS_A_VERY_SECURE_SECRET_FOR_RECONNOITERING_APP
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyDq1AmMNQKpXR44TUVgsohjpcO7XiZcvnM
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key-here
 ```
 
 **For NEXTAUTH_URL:**
