@@ -6,7 +6,8 @@ const Footer = () => {
 
   return (
     <footer className="bg-[var(--primary)] text-white mt-20">
-      <div className="container-wide py-20">
+      <div className="container-wide">
+        <div className="py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-2">
@@ -181,7 +182,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/20 mt-12 pt-8">
+        <div className="border-t border-white/20 mt-12 pt-8 pb-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm">
               © {currentYear} Reconnoitering. All rights reserved.
@@ -198,6 +199,7 @@ const Footer = () => {
               </Link>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </footer>
