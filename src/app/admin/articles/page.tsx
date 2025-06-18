@@ -72,7 +72,7 @@ export default function AdminArticles() {
   };
 
   const getCategoryColor = (category: string) => {
-    const colors = {
+    const colors: { [key: string]: string } = {
       'art-trends': 'bg-purple-100 text-purple-800',
       'museum-news': 'bg-blue-100 text-blue-800',
       'artist-spotlight': 'bg-green-100 text-green-800',
