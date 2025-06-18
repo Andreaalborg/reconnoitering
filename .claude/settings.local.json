@@ -10,7 +10,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git config:*)",
-      "WebFetch(domain:www.tate.org.uk)"
+      "WebFetch(domain:www.tate.org.uk)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }
