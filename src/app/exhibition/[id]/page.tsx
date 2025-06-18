@@ -71,16 +71,16 @@ function ExhibitionDetailContent() {
           console.error('API Error Response:', response.status, errorData);
           
           if (response.status === 404) {
-            throw new Error('Fant ikke utstillingen');
+            throw new Error('Exhibition not found');
           }
-          throw new Error(`Kunne ikke hente utstilling: ${errorData?.error || response.statusText}`);
+          throw new Error(`Could not fetch exhibition: ${errorData?.error || response.statusText}`);
         }
         
         const data = await response.json();
         console.log('Exhibition data received:', data);
         
         if (!data.success || !data.data) {
-          throw new Error('Ugyldig dataformat fra API');
+          throw new Error('Invalid data format from API');
         }
         
         // Ensure required arrays exist
@@ -95,7 +95,7 @@ function ExhibitionDetailContent() {
         setExhibition(exhibition);
       } catch (err) {
         console.error('Error fetching exhibition:', err);
-        setError(`Kunne ikke laste utstillingen. ${err instanceof Error ? err.message : 'Prøv igjen senere.'}`);
+        setError(`Could not load exhibition. ${err instanceof Error ? err.message : 'Try again later.'}`);
       } finally {
         setLoading(false);
       }
@@ -208,11 +208,11 @@ function ExhibitionDetailContent() {
   
   // Get location display text
   const getLocationText = () => {
-    if (!exhibition) return 'Ukjent sted';
+    if (!exhibition) return 'Unknown location';
     if (exhibition.venue?.name) {
       return `${exhibition.venue.name}, ${exhibition.venue.city}, ${exhibition.venue.country}`;
     }
-    return `${exhibition.location?.city || 'Ukjent sted'}, ${exhibition.location?.country || ''}`;
+    return `${exhibition.location?.city || 'Unknown location'}, ${exhibition.location?.country || ''}`;
   };
   
   // Check if today is the weekly closing day
@@ -238,7 +238,7 @@ function ExhibitionDetailContent() {
     if (exhibition?.location?.city) {
       return exhibition.location.city;
     }
-    return 'Ukjent sted';
+    return 'Unknown location';
   };
   
   // Hjelpefunksjon for å sikre at bildeadresser er gyldige
@@ -268,10 +268,10 @@ function ExhibitionDetailContent() {
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Utstilling ikke funnet</h1>
-            <p className="mt-4 text-lg text-gray-600">Utstillingen du leter etter eksisterer ikke eller har blitt fjernet.</p>
+            <h1 className="text-3xl font-bold text-gray-900">Exhibition not found</h1>
+            <p className="mt-4 text-lg text-gray-600">The exhibition you're looking for does not exist or has been removed.</p>
             <Link href="/exhibitions" className="mt-8 inline-block bg-rose-500 text-white px-6 py-3 rounded-md">
-              Bla gjennom alle utstillinger
+              Browse all exhibitions
             </Link>
           </div>
         </main>
@@ -298,7 +298,7 @@ function ExhibitionDetailContent() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          Tilbake til utstillinger
+          Back to exhibitions
         </Link>
         
         <div className="bg-white rounded-xl overflow-hidden shadow-lg">
@@ -316,13 +316,13 @@ function ExhibitionDetailContent() {
             <div className="absolute top-4 left-4 flex flex-col space-y-2">
               {isCurrentlyRunning && (
                 <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
-                  Pågående
+                  Ongoing
                 </span>
               )}
               
               {isCurrentlyRunning && isClosedToday && (
                 <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
-                  Stengt i dag
+                  Closed today
                 </span>
               )}
             </div>
@@ -362,17 +362,17 @@ function ExhibitionDetailContent() {
                 {/* Display closed day if set */}
                 {exhibition.closedDay && (
                   <p className="mt-2 text-amber-600">
-                    <span className="font-medium">Stengt på {exhibition.closedDay}er</span>
+                    <span className="font-medium">Closed on {exhibition.closedDay}s</span>
                   </p>
                 )}
               </div>
               
               <div className="mt-4 md:mt-0 bg-gray-100 rounded-lg p-4">
-                <p className="font-medium">Datoer</p>
+                <p className="font-medium">Dates</p>
                 <p className="text-gray-600">{startDate} - {endDate}</p>
                 {exhibition.ticketPrice && (
                   <>
-                    <p className="font-medium mt-2">Billettpris</p>
+                    <p className="font-medium mt-2">Ticket price</p>
                     <p className="text-gray-600">{exhibition.ticketPrice}</p>
                   </>
                 )}
@@ -383,7 +383,7 @@ function ExhibitionDetailContent() {
                       onClick={() => handleBookOnDate(new Date().toISOString().split('T')[0])}
                       className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded text-sm"
                     >
-                      Besøk i dag
+                      Visit today
                     </button>
                   )}
                   
@@ -394,7 +394,7 @@ function ExhibitionDetailContent() {
                       rel="noopener noreferrer"
                       className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded text-center text-sm"
                     >
-                      Kjøp billetter
+                      Buy tickets
                     </a>
                   )}
                   
@@ -404,26 +404,26 @@ function ExhibitionDetailContent() {
             </div>
             
             <div className="border-t border-gray-200 pt-6">
-              <h2 className="text-xl font-bold mb-4">Om denne utstillingen</h2>
+              <h2 className="text-xl font-bold mb-4">About this exhibition</h2>
               <p className="text-gray-700 mb-6 whitespace-pre-line">{exhibition.description}</p>
               
               {/* Additional details section - artists, categories, etc. */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Kunstnere</h3>
+                  <h3 className="text-lg font-bold mb-2">Artists</h3>
                   <ul className="list-disc list-inside text-gray-600">
                     {exhibition.artists && exhibition.artists.length > 0 ? (
                       exhibition.artists.map((artist, index) => (
                         <li key={index}>{artist}</li>
                       ))
                     ) : (
-                      <li>Ingen artister oppgitt</li>
+                      <li>No artists listed</li>
                     )}
                   </ul>
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Kategorier</h3>
+                  <h3 className="text-lg font-bold mb-2">Categories</h3>
                   <div className="flex flex-wrap gap-2">
                     {exhibition.category && exhibition.category.length > 0 ? (
                       exhibition.category.map((category, index) => (
@@ -432,7 +432,7 @@ function ExhibitionDetailContent() {
                         </span>
                       ))
                     ) : (
-                      <span className="text-gray-500">Ingen kategorier oppgitt</span>
+                      <span className="text-gray-500">No categories listed</span>
                     )}
                   </div>
                 </div>
@@ -442,12 +442,12 @@ function ExhibitionDetailContent() {
               {hasCoordinates && (
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold">Beliggenhet</h3>
+                    <h3 className="text-lg font-bold">Location</h3>
                     <button 
                       onClick={() => setShowMap(!showMap)} 
                       className="text-rose-500 hover:text-rose-700 text-sm font-medium"
                     >
-                      {showMap ? 'Skjul kart' : 'Vis kart'}
+                      {showMap ? 'Hide map' : 'Show map'}
                     </button>
                   </div>
                   
@@ -469,7 +469,7 @@ function ExhibitionDetailContent() {
                   )}
                   
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="font-medium">{exhibition.venue?.name || exhibition.location?.city || 'Ukjent sted'}</p>
+                    <p className="font-medium">{exhibition.venue?.name || exhibition.location?.city || 'Unknown location'}</p>
                     <p className="text-gray-600">{exhibition.venue?.address || ''}</p>
                     <p className="text-gray-600">
                       {exhibition.location?.city || exhibition.venue?.city || ''}{exhibition.location?.city || exhibition.venue?.city ? ', ' : ''}
@@ -482,7 +482,7 @@ function ExhibitionDetailContent() {
               {/* Additional images */}
               {exhibition.images && exhibition.images.length > 0 && exhibition.images.some(img => !!img) && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold mb-3">Galleri</h3>
+                  <h3 className="text-lg font-bold mb-3">Gallery</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {exhibition.images
                       .filter(image => image && image !== '')
@@ -490,7 +490,7 @@ function ExhibitionDetailContent() {
                         <div key={index} className="relative h-32 rounded-lg overflow-hidden">
                           <Image 
                             src={getValidImageUrl(image)}
-                            alt={`${exhibition.title} bilde ${index + 1}`}
+                            alt={`${exhibition.title} image ${index + 1}`}
                             fill
                             className="object-cover"
                             sizes="(max-width: 768px) 50vw, 25vw"
@@ -503,28 +503,28 @@ function ExhibitionDetailContent() {
               
               {/* Plan your visit section */}
               <div className="mb-6 bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-lg font-bold mb-3">Planlegg ditt besøk</h3>
+                <h3 className="text-lg font-bold mb-3">Plan your visit</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-medium text-blue-800 mb-2">Åpningstider</h4>
+                    <h4 className="font-medium text-blue-800 mb-2">Opening hours</h4>
                     <p className="text-gray-700 mb-2">
-                      Denne utstillingen er åpen fra {startDate} til {endDate}.
+                      This exhibition is open from {startDate} to {endDate}.
                     </p>
                     {exhibition.closedDay && (
                       <p className="text-gray-700 mb-2">
-                        <span className="font-medium">Stengt på {exhibition.closedDay}er</span>
+                        <span className="font-medium">Closed on {exhibition.closedDay}s</span>
                       </p>
                     )}
                     <p className="text-sm text-gray-600">
-                      Vennligst sjekk den offisielle nettsiden for spesifikke åpningstider og eventuelle spesielle lukninger.
+                      Please check the official website for specific opening hours and any special closures.
                     </p>
                   </div>
                   
                   <div>
-                    <h4 className="font-medium text-blue-800 mb-2">Legg til i reiseplan</h4>
+                    <h4 className="font-medium text-blue-800 mb-2">Add to itinerary</h4>
                     <p className="text-gray-700 mb-3">
-                      Planlegger du et besøk? Velg en dato for å legge denne utstillingen til din dagsplan:
+                      Planning a visit? Choose a date to add this exhibition to your day plan:
                     </p>
                     
                     <div className="flex items-center space-x-2">
@@ -543,7 +543,7 @@ function ExhibitionDetailContent() {
                         }}
                         className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
                       >
-                        Legg til i plan
+                        Add to plan
                       </button>
                     </div>
                   </div>
@@ -559,7 +559,7 @@ function ExhibitionDetailContent() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center text-rose-500 hover:text-rose-700"
                   >
-                    <span>Besøk utstillingens nettside</span>
+                    <span>Visit exhibition website</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
@@ -570,7 +570,7 @@ function ExhibitionDetailContent() {
               {/* Tags at the bottom */}
               {exhibition.tags && exhibition.tags.length > 0 && (
                 <div className="mt-8 pt-4 border-t border-gray-200">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Emneord</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Tags</h3>
                   <div className="flex flex-wrap gap-2">
                     {exhibition.tags.map((tag, index) => (
                       <span key={index} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">

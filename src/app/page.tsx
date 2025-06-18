@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
 import VerticalCalendar from '@/components/VerticalCalendar';
 import { ArrowRight, MapPin, Calendar, Search } from 'lucide-react';
@@ -35,11 +34,11 @@ function HomeContent() {
         setLoading(true);
         
         // Fetch upcoming exhibitions
-        const upcomingRes = await fetch('/api/exhibitions?sort=startDate&limit=6&upcoming=true');
+        const upcomingRes = await fetch('/api/exhibitions?sort=startDate&limit=4&upcoming=true');
         const upcomingData = await upcomingRes.json();
         
         // Fetch popular exhibitions
-        const popularRes = await fetch('/api/exhibitions?sort=-popularity&limit=6');
+        const popularRes = await fetch('/api/exhibitions?sort=-popularity&limit=8');
         const popularData = await popularRes.json();
         
         if (upcomingData.success && popularData.success) {
@@ -180,7 +179,7 @@ function HomeContent() {
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {upcomingExhibitions.map((exhibition, index) => (
               <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
                 <ExhibitionCard exhibition={exhibition} minimal />
@@ -233,7 +232,7 @@ function HomeContent() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {recommendedExhibitions.slice(0, 8).map((exhibition, index) => (
+              {recommendedExhibitions.slice(0, 4).map((exhibition, index) => (
                 <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
                   <ExhibitionCard exhibition={exhibition} minimal />
                 </div>
@@ -242,6 +241,85 @@ function HomeContent() {
           </div>
         </section>
       )}
+
+      {/* Blog/Articles Section */}
+      <section className="py-20">
+        <div className="container-wide">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-4xl font-light mb-2">Art Insights</h2>
+              <div className="accent-line"></div>
+              <p className="text-[var(--text-muted)] mt-2">Expert perspectives on the art world</p>
+            </div>
+            <Link href="/blog" className="text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-2">
+              All Articles <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Article 1 */}
+            <article className="group">
+              <Link href="/blog/contemporary-art-trends">
+                <div className="aspect-[16/9] bg-[var(--primary-light)] rounded-lg mb-4 overflow-hidden">
+                  {/* Placeholder for article image */}
+                  <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                    Article Image
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-[var(--text-muted)]">December 15, 2024</p>
+                  <h3 className="text-xl font-serif group-hover:text-[var(--secondary)] transition-colors">
+                    Contemporary Art Trends Shaping 2025
+                  </h3>
+                  <p className="text-[var(--text-muted)] line-clamp-3">
+                    Explore the emerging movements and artistic expressions that are defining the contemporary art landscape this year.
+                  </p>
+                </div>
+              </Link>
+            </article>
+
+            {/* Article 2 */}
+            <article className="group">
+              <Link href="/blog/museum-technology">
+                <div className="aspect-[16/9] bg-[var(--primary-light)] rounded-lg mb-4 overflow-hidden">
+                  <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                    Article Image
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-[var(--text-muted)]">December 10, 2024</p>
+                  <h3 className="text-xl font-serif group-hover:text-[var(--secondary)] transition-colors">
+                    How Museums Are Embracing Digital Innovation
+                  </h3>
+                  <p className="text-[var(--text-muted)] line-clamp-3">
+                    From virtual reality tours to NFT collections, discover how technology is transforming the museum experience.
+                  </p>
+                </div>
+              </Link>
+            </article>
+
+            {/* Article 3 */}
+            <article className="group">
+              <Link href="/blog/art-collectors-guide">
+                <div className="aspect-[16/9] bg-[var(--primary-light)] rounded-lg mb-4 overflow-hidden">
+                  <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                    Article Image
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-[var(--text-muted)]">December 5, 2024</p>
+                  <h3 className="text-xl font-serif group-hover:text-[var(--secondary)] transition-colors">
+                    A Beginner's Guide to Art Collecting
+                  </h3>
+                  <p className="text-[var(--text-muted)] line-clamp-3">
+                    Essential tips and insights for those looking to start their own art collection, from galleries to auctions.
+                  </p>
+                </div>
+              </Link>
+            </article>
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-20 bg-[var(--secondary)] text-white">
@@ -271,10 +349,5 @@ function HomeContent() {
 }
 
 export default function HomePage() {
-  return (
-    <>
-      <Header />
-      <HomeContent />
-    </>
-  );
+  return <HomeContent />;
 }

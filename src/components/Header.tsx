@@ -251,6 +251,10 @@ const Header = () => {
               <Link href="/about" className={`text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors ${pathname === '/about' ? 'text-[var(--primary)]' : ''}`}>
                 About
               </Link>
+              
+              <Link href="/contact" className={`text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors ${pathname === '/contact' ? 'text-[var(--primary)]' : ''}`}>
+                Contact
+              </Link>
             </nav>
             
             {/* Search Bar */}
