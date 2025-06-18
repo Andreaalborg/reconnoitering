@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
 import VerticalCalendar from '@/components/VerticalCalendar';
+import { ArrowRight, MapPin, Calendar, Search } from 'lucide-react';
 
 interface Exhibition {
   _id: string;
@@ -50,221 +51,224 @@ function HomeContent() {
         // Fetch recommended exhibitions if user is logged in
         if (session?.user) {
           try {
-            const recommendedRes = await fetch('/api/recommendation?limit=6');
+            const recommendedRes = await fetch('/api/recommendation');
             const recommendedData = await recommendedRes.json();
-            
             if (recommendedData.success) {
               setRecommendedExhibitions(recommendedData.data || []);
             }
-          } catch (err) {
-            console.error('Error fetching recommendations:', err);
-            // Don't fail the whole page if recommendations fail
+          } catch (error) {
+            console.error('Failed to fetch recommendations:', error);
           }
         }
-      } catch (err) {
-        console.error('Error fetching exhibitions:', err);
+      } catch (error) {
+        console.error('Error fetching data:', error);
         setError('Failed to load exhibitions. Please try again later.');
       } finally {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, [session]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
-          {error}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="btn-primary"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <section className="mb-16 text-center animate-fade-in">
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4 gradient-text">
-          Discover Art Exhibitions Worldwide
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-10">
-          Find the perfect exhibitions for your next trip based on your travel dates and interests.
-        </p>
+    <main className="min-h-screen bg-white">
+      {/* Hero Section - Tate-inspired minimal hero */}
+      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/90 z-10"></div>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link 
-            href="/exhibitions" 
-            className="btn-primary inline-block"
-          >
-            Explore Exhibitions
-          </Link>
-          <Link 
-            href="/map" 
-            className="bg-white text-gray-700 px-8 py-3 rounded-full text-lg font-medium hover:bg-gray-100 transition-all duration-300 border border-gray-200 inline-block"
-          >
-            View on Map 🗺️
-          </Link>
+        {/* Background image from featured exhibition */}
+        {popularExhibitions[0]?.coverImage && (
+          <div className="absolute inset-0">
+            <img 
+              src={popularExhibitions[0].coverImage} 
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        <div className="relative z-20 text-center container-narrow">
+          <h1 className="display-text mb-6 animate-fade-in">
+            Discover Art
+            <br />
+            <span className="text-[var(--secondary)]">Exhibitions</span>
+          </h1>
+          <div className="accent-line mx-auto mb-8 animate-fade-in-delay"></div>
+          <p className="text-lg text-[var(--text-muted)] mb-12 max-w-2xl mx-auto animate-fade-in-delay-2">
+            Explore the world's most compelling art exhibitions, curated for the curious mind
+          </p>
+          
+          {/* Search actions */}
+          <div className="flex flex-wrap gap-4 justify-center animate-fade-in-delay-3">
+            <Link href="/exhibitions" className="btn-primary">
+              EXPLORE ALL EXHIBITIONS
+            </Link>
+            <Link href="/map" className="btn-secondary">
+              VIEW ON MAP
+            </Link>
+          </div>
         </div>
       </section>
-      
-      {/* Two-column layout for calendar and upcoming exhibitions */}
-      <section className="mb-16 grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-delay">
-        {/* Vertical Calendar - Takes 1/3 of the space on large screens */}
-        <div className="lg:col-span-1">
-          <VerticalCalendar />
+
+      {/* Quick Search Section */}
+      <section className="py-12 border-y border-[var(--border)]">
+        <div className="container-wide">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Link href="/nearby" className="group flex items-center gap-4 p-6 hover:bg-[var(--primary-light)] transition-colors">
+              <MapPin className="w-8 h-8 text-[var(--secondary)]" />
+              <div className="text-left">
+                <h3 className="font-semibold text-lg group-hover:underline">Near You</h3>
+                <p className="text-[var(--text-muted)]">Find exhibitions in your area</p>
+              </div>
+            </Link>
+            
+            <Link href="/calendar" className="group flex items-center gap-4 p-6 hover:bg-[var(--primary-light)] transition-colors">
+              <Calendar className="w-8 h-8 text-[var(--secondary)]" />
+              <div className="text-left">
+                <h3 className="font-semibold text-lg group-hover:underline">This Week</h3>
+                <p className="text-[var(--text-muted)]">What's on right now</p>
+              </div>
+            </Link>
+            
+            <Link href="/date-search" className="group flex items-center gap-4 p-6 hover:bg-[var(--primary-light)] transition-colors">
+              <Search className="w-8 h-8 text-[var(--secondary)]" />
+              <div className="text-left">
+                <h3 className="font-semibold text-lg group-hover:underline">Plan Your Visit</h3>
+                <p className="text-[var(--text-muted)]">Search by specific dates</p>
+              </div>
+            </Link>
+          </div>
         </div>
-        
-        {/* Upcoming Exhibitions - Takes 2/3 of the space on large screens */}
-        <div className="lg:col-span-2">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-800">Upcoming Exhibitions</h2>
-            <Link href="/exhibitions?sort=startDate" className="text-rose-500 hover:text-rose-600 font-medium transition-colors">
-              View all →
+      </section>
+
+      {/* Upcoming Exhibitions */}
+      <section className="py-20">
+        <div className="container-wide">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-4xl font-light mb-2">Opening Soon</h2>
+              <div className="accent-line"></div>
+            </div>
+            <Link href="/exhibitions?sort=startDate" className="text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-2">
+              View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {upcomingExhibitions.map((exhibition, index) => (
-              <div key={exhibition._id} className={`animate-fade-in-delay-${index + 1}`}>
-                <ExhibitionCard
-                  id={exhibition._id}
-                  title={exhibition.title}
-                  location={exhibition.location}
-                  coverImage={exhibition.coverImage}
-                  startDate={exhibition.startDate}
-                  endDate={exhibition.endDate}
-                />
+              <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
+                <ExhibitionCard exhibition={exhibition} minimal />
               </div>
             ))}
           </div>
         </div>
       </section>
-      
-      {/* Recommended Exhibitions */}
-      {session?.user && recommendedExhibitions.length > 0 && (
-        <section className="mb-16 animate-fade-in-delay-2">
-          <div className="bg-gradient-to-r from-rose-50 to-indigo-50 rounded-2xl p-8">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">Recommended for You</h2>
-                <p className="text-gray-600">Based on your preferences and past activity</p>
+
+      {/* Featured Section with Calendar */}
+      <section className="py-20 bg-[var(--primary-light)]">
+        <div className="container-wide">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-2">
+              <h2 className="text-4xl font-light mb-2">Popular Now</h2>
+              <div className="accent-line mb-12"></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {popularExhibitions.slice(0, 4).map((exhibition, index) => (
+                  <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
+                    <ExhibitionCard exhibition={exhibition} minimal />
+                  </div>
+                ))}
               </div>
-              <Link href="/account/preferences" className="text-rose-500 hover:text-rose-600 font-medium transition-colors">
-                Adjust Preferences →
-              </Link>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {recommendedExhibitions.map((exhibition) => (
-                <ExhibitionCard
-                  key={exhibition._id}
-                  id={exhibition._id}
-                  title={exhibition.title}
-                  location={exhibition.location}
-                  coverImage={exhibition.coverImage}
-                  startDate={exhibition.startDate}
-                  endDate={exhibition.endDate}
-                />
+            <div>
+              <h3 className="text-2xl font-light mb-6">Calendar View</h3>
+              <div className="bg-white p-6 border border-[var(--border)]">
+                <VerticalCalendar />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Personalized Recommendations */}
+      {session && recommendedExhibitions.length > 0 && (
+        <section className="py-20">
+          <div className="container-wide">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-light mb-2">Recommended for You</h2>
+              <div className="accent-line mx-auto"></div>
+              <p className="text-[var(--text-muted)] mt-4">Based on your preferences</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {recommendedExhibitions.map((exhibition, index) => (
+                <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <ExhibitionCard exhibition={exhibition} minimal />
+                </div>
               ))}
             </div>
           </div>
         </section>
       )}
-      
-      {/* Popular Exhibitions */}
-      <section className="mb-16 animate-fade-in-delay-3">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">Popular Exhibitions</h2>
-          <Link href="/exhibitions?sort=popularity" className="text-rose-500 hover:text-rose-600 font-medium transition-colors">
-            View all →
-          </Link>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {popularExhibitions.map((exhibition) => (
-            <ExhibitionCard
-              key={exhibition._id}
-              id={exhibition._id}
-              title={exhibition.title}
-              location={exhibition.location}
-              coverImage={exhibition.coverImage}
-              startDate={exhibition.startDate}
-              endDate={exhibition.endDate}
-            />
-          ))}
-        </div>
-      </section>
-      
-      {/* Features Section */}
-      <section className="mb-16 animate-fade-in-delay-4">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-10">Why Choose Reconnoitering?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 text-center card-hover">
-            <div className="text-5xl mb-4">🗓️</div>
-            <h3 className="text-xl font-bold mb-3">Search by Date</h3>
-            <p className="text-gray-600">
-              Find exhibitions that match your travel schedule, so you never miss an opportunity.
-            </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 text-center card-hover">
-            <div className="text-5xl mb-4">🌍</div>
-            <h3 className="text-xl font-bold mb-3">Explore by Location</h3>
-            <p className="text-gray-600">
-              Discover exhibitions in your destination city or within a specific radius.
-            </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 text-center card-hover">
-            <div className="text-5xl mb-4">🎨</div>
-            <h3 className="text-xl font-bold mb-3">Filter by Interest</h3>
-            <p className="text-gray-600">
-              Focus on the art styles, artists, and themes that you care about most.
-            </p>
-          </div>
-        </div>
-      </section>
-      
+
       {/* CTA Section */}
-      <section className="text-center py-16 bg-gradient-to-r from-rose-100 to-indigo-100 rounded-2xl animate-fade-in-delay-5">
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready to discover your next art experience?</h2>
-        <p className="text-xl text-gray-600 mb-8">Join thousands of art lovers using Reconnoitering</p>
-        <Link 
-          href="/auth/signup" 
-          className="btn-primary inline-block text-lg"
-        >
-          Get Started for Free
-        </Link>
+      <section className="py-20 bg-black text-white">
+        <div className="container-narrow text-center">
+          <h2 className="text-4xl font-light mb-6">Start Your Art Journey</h2>
+          <p className="text-lg mb-8 opacity-80">
+            Join thousands discovering extraordinary exhibitions worldwide
+          </p>
+          {!session ? (
+            <div className="flex gap-4 justify-center">
+              <Link href="/auth/register" className="btn-secondary bg-white text-black border-white hover:bg-transparent hover:text-white">
+                CREATE ACCOUNT
+              </Link>
+              <Link href="/auth/login" className="btn-secondary border-white text-white hover:bg-white hover:text-black">
+                SIGN IN
+              </Link>
+            </div>
+          ) : (
+            <Link href="/account/preferences" className="btn-secondary bg-white text-black border-white hover:bg-transparent hover:text-white">
+              SET YOUR PREFERENCES
+            </Link>
+          )}
+        </div>
       </section>
-    </>
+    </main>
   );
 }
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Header />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <HomeContent />
-      </main>
-      
-      <footer className="bg-white border-t border-gray-200 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-gray-500">
-            © {new Date().getFullYear()} Reconnoitering. All rights reserved.
-          </p>
-        </div>
-      </footer>
-    </div>
+      <HomeContent />
+    </>
   );
 }
