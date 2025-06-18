@@ -3,19 +3,20 @@
 @tailwind utilities;
 
 :root {
-  /* Tate-inspired color palette */
+  /* Softer, more nuanced color palette */
   --background: #ffffff;
-  --foreground: #000000;
+  --foreground: #2d2d2d; /* Softer than pure black */
   --card-background: #ffffff;
-  --primary: #000000; /* Pure black for primary */
-  --primary-hover: #333333; /* Dark gray for hover */
-  --primary-light: #f5f5f5; /* Light gray */
-  --secondary: #ff3333; /* Tate's signature red accent */
-  --secondary-hover: #cc0000; /* Darker red */
-  --accent: #0066cc; /* Blue accent */
-  --border: #e0e0e0; /* Subtle border */
-  --text-muted: #666666; /* Muted text */
-  --text-light: #999999; /* Light text */
+  --primary: #1a1a1a; /* Softer black for primary */
+  --primary-hover: #404040; /* Medium gray for hover */
+  --primary-light: #f8f8f8; /* Very light gray */
+  --secondary: #5e7ce2; /* Soft blue instead of red */
+  --secondary-hover: #4a63c5; /* Darker blue */
+  --accent: #7c9885; /* Sage green accent */
+  --accent-hover: #6b8774; /* Darker sage */
+  --border: #e8e8e8; /* Subtle border */
+  --text-muted: #757575; /* Muted text */
+  --text-light: #a0a0a0; /* Light text */
   
   /* Typography */
   --font-display: 'Georgia', 'Times New Roman', serif;
@@ -29,6 +30,12 @@
   --space-lg: 3rem;
   --space-xl: 4rem;
   --space-2xl: 6rem;
+  
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 /* Custom CSS properties for theme */
@@ -41,14 +48,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #1a1a1a;
-    --foreground: #ffffff;
+    --foreground: #f0f0f0;
     --card-background: #2a2a2a;
-    --primary: #ffffff;
-    --primary-hover: #e0e0e0;
+    --primary: #f0f0f0;
+    --primary-hover: #d0d0d0;
     --primary-light: #333333;
-    --secondary: #ff3333;
-    --secondary-hover: #ff6666;
-    --accent: #4d94ff;
+    --secondary: #7a92e8;
+    --secondary-hover: #6a82d8;
+    --accent: #8ca895;
+    --accent-hover: #7b9784;
     --border: #404040;
     --text-muted: #b3b3b3;
     --text-light: #808080;
@@ -91,15 +99,18 @@ h4 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
   padding: 0 var(--space-md);
 }
 
-/* Tate-style minimal card design */
+/* Refined card design with border radius */
 .card-minimal {
   background: var(--card-background);
   border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   transition: all 0.2s ease;
+  overflow: hidden;
 }
 
 .card-minimal:hover {
   border-color: var(--primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 /* Image hover effect */
@@ -140,12 +151,13 @@ h4 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
   }
 }
 
-/* Tate-inspired minimal accents */
+/* Refined minimal accents */
 .accent-line {
   height: 3px;
   background-color: var(--secondary);
   width: 60px;
   margin: var(--space-sm) 0;
+  border-radius: var(--radius-sm);
 }
 
 .text-balance {
@@ -166,12 +178,13 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Tate-inspired button styles */
+/* Refined button styles with border radius */
 .btn-primary {
   background-color: var(--primary);
   color: var(--background);
-  padding: 1rem 2rem;
+  padding: 0.875rem 1.75rem;
   border: 2px solid var(--primary);
+  border-radius: var(--radius-md);
   font-weight: 500;
   transition: all 0.2s ease;
   text-transform: uppercase;
@@ -180,15 +193,17 @@ html {
 }
 
 .btn-primary:hover {
-  background-color: transparent;
-  color: var(--primary);
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
   background-color: transparent;
   color: var(--primary);
-  padding: 1rem 2rem;
-  border: 2px solid var(--primary);
+  padding: 0.875rem 1.75rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
   font-weight: 500;
   transition: all 0.2s ease;
   text-transform: uppercase;
@@ -197,16 +212,17 @@ html {
 }
 
 .btn-secondary:hover {
-  background-color: var(--primary);
-  color: var(--background);
+  border-color: var(--primary);
+  background-color: var(--primary-light);
 }
 
-/* Red accent button */
+/* Accent button */
 .btn-accent {
   background-color: var(--secondary);
   color: white;
-  padding: 1rem 2rem;
+  padding: 0.875rem 1.75rem;
   border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
   font-weight: 500;
   transition: all 0.2s ease;
   text-transform: uppercase;
@@ -217,6 +233,7 @@ html {
 .btn-accent:hover {
   background-color: var(--secondary-hover);
   border-color: var(--secondary-hover);
+  transform: translateY(-1px);
 }
 
 /* Add this to your existing CSS */

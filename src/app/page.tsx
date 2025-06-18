@@ -216,18 +216,23 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Personalized Recommendations */}
+      {/* Personalized Recommendations - Now part of main content flow */}
       {session && recommendedExhibitions.length > 0 && (
-        <section className="py-20">
+        <section className="py-20 bg-gradient-to-b from-white to-[var(--primary-light)]">
           <div className="container-wide">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-light mb-2">Recommended for You</h2>
-              <div className="accent-line mx-auto"></div>
-              <p className="text-[var(--text-muted)] mt-4">Based on your preferences</p>
+            <div className="flex justify-between items-end mb-12">
+              <div>
+                <h2 className="text-4xl font-light mb-2">Curated for You</h2>
+                <div className="accent-line"></div>
+                <p className="text-[var(--text-muted)] mt-2">Based on your art preferences</p>
+              </div>
+              <Link href="/account/preferences" className="text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-2">
+                Update Preferences <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {recommendedExhibitions.map((exhibition, index) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recommendedExhibitions.slice(0, 8).map((exhibition, index) => (
                 <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
                   <ExhibitionCard exhibition={exhibition} minimal />
                 </div>
@@ -238,23 +243,23 @@ function HomeContent() {
       )}
 
       {/* CTA Section */}
-      <section className="py-20 bg-black text-white">
+      <section className="py-20 bg-[var(--secondary)] text-white">
         <div className="container-narrow text-center">
           <h2 className="text-4xl font-light mb-6">Start Your Art Journey</h2>
-          <p className="text-lg mb-8 opacity-80">
+          <p className="text-lg mb-8 opacity-90">
             Join thousands discovering extraordinary exhibitions worldwide
           </p>
           {!session ? (
             <div className="flex gap-4 justify-center">
-              <Link href="/auth/register" className="btn-secondary bg-white text-black border-white hover:bg-transparent hover:text-white">
+              <Link href="/auth/register" className="btn-secondary bg-white text-[var(--secondary)] border-white hover:bg-transparent hover:text-white">
                 CREATE ACCOUNT
               </Link>
-              <Link href="/auth/login" className="btn-secondary border-white text-white hover:bg-white hover:text-black">
+              <Link href="/auth/login" className="btn-secondary border-white text-white hover:bg-white hover:text-[var(--secondary)]">
                 SIGN IN
               </Link>
             </div>
           ) : (
-            <Link href="/account/preferences" className="btn-secondary bg-white text-black border-white hover:bg-transparent hover:text-white">
+            <Link href="/account/preferences" className="btn-secondary bg-white text-[var(--secondary)] border-white hover:bg-transparent hover:text-white">
               SET YOUR PREFERENCES
             </Link>
           )}
