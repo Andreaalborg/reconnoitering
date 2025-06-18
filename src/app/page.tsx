@@ -15,7 +15,8 @@ interface Exhibition {
     city: string;
     country: string;
   };
-  coverImage: string;
+  coverImage?: string;
+  imageUrl?: string;
   startDate: string;
   endDate: string;
 }
@@ -102,10 +103,10 @@ function HomeContent() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/90 z-10"></div>
         
         {/* Background image from featured exhibition */}
-        {popularExhibitions[0]?.coverImage && (
+        {(popularExhibitions[0]?.coverImage || popularExhibitions[0]?.imageUrl) && (
           <div className="absolute inset-0">
             <img 
-              src={popularExhibitions[0].coverImage} 
+              src={popularExhibitions[0].coverImage || popularExhibitions[0].imageUrl} 
               alt=""
               className="w-full h-full object-cover"
             />

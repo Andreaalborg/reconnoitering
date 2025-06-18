@@ -20,6 +20,7 @@ interface ExhibitionCardProps {
       country?: string;
     };
     coverImage?: string;
+    imageUrl?: string;
     startDate: string;
     endDate: string;
     tags?: string[];
@@ -56,7 +57,7 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
     title: props.title || '',
     venue: props.venue,
     location: props.location,
-    coverImage: props.coverImage || props.imageUrl,
+    coverImage: props.coverImage || props.imageUrl || props.exhibition?.imageUrl || props.exhibition?.coverImage,
     startDate: props.startDate || '',
     endDate: props.endDate || '',
     tags: props.tags,

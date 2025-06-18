@@ -10,10 +10,10 @@
   --primary: #1a1a1a; /* Softer black for primary */
   --primary-hover: #404040; /* Medium gray for hover */
   --primary-light: #f8f8f8; /* Very light gray */
-  --secondary: #5e7ce2; /* Soft blue instead of red */
-  --secondary-hover: #4a63c5; /* Darker blue */
-  --accent: #7c9885; /* Sage green accent */
-  --accent-hover: #6b8774; /* Darker sage */
+  --secondary: #404040; /* Neutral dark gray */
+  --secondary-hover: #2d2d2d; /* Darker gray */
+  --accent: #666666; /* Medium gray accent */
+  --accent-hover: #555555; /* Darker gray */
   --border: #e8e8e8; /* Subtle border */
   --text-muted: #757575; /* Muted text */
   --text-light: #a0a0a0; /* Light text */
