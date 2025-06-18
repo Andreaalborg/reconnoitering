@@ -5,8 +5,8 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[var(--primary)] text-white">
-      <div className="container-wide py-16">
+    <footer className="bg-[var(--primary)] text-white mt-20">
+      <div className="container-wide py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-2">
@@ -141,6 +141,11 @@ const Footer = () => {
               <li>
                 <Link href="/careers" className="text-gray-300 hover:text-white transition-colors">
                   Careers
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq" className="text-gray-300 hover:text-white transition-colors">
+                  FAQ
                 </Link>
               </li>
             </ul>
