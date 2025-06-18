@@ -57,7 +57,7 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
     title: props.title || '',
     venue: props.venue,
     location: props.location,
-    coverImage: props.coverImage || props.imageUrl || props.exhibition?.imageUrl || props.exhibition?.coverImage,
+    coverImage: props.coverImage || props.imageUrl || '',
     startDate: props.startDate || '',
     endDate: props.endDate || '',
     tags: props.tags,
@@ -106,7 +106,8 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
   
   const exhibitionStatus = getExhibitionStatus();
   const fallbackImage = '/images/placeholder-exhibition.svg';
-  const imageSrc = imageError || !exhibition.coverImage ? fallbackImage : exhibition.coverImage;
+  const imageUrl = exhibition.coverImage || (exhibition as any).imageUrl || '';
+  const imageSrc = imageError || !imageUrl ? fallbackImage : imageUrl;
   
   // Get location display text
   const getLocationText = () => {
