@@ -198,13 +198,11 @@ export default function NewArticle() {
 
             {/* Cover Image */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cover Image
-              </label>
               <ImageUpload
-                imageUrl={formData.coverImage}
-                onImageUrlChange={(url) => setFormData(prev => ({ ...prev, coverImage: url }))}
-                onImageUpload={() => {}}
+                initialImage={formData.coverImage}
+                onImageChange={(url) => setFormData(prev => ({ ...prev, coverImage: url }))}
+                label="Cover Image"
+                required={false}
               />
             </div>
 

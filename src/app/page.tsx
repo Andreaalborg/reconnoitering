@@ -179,7 +179,7 @@ function HomeContent() {
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {upcomingExhibitions.map((exhibition, index) => (
               <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
                 <ExhibitionCard exhibition={exhibition} minimal />
@@ -231,7 +231,7 @@ function HomeContent() {
               </Link>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {recommendedExhibitions.slice(0, 4).map((exhibition, index) => (
                 <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
                   <ExhibitionCard exhibition={exhibition} minimal />
@@ -243,11 +243,11 @@ function HomeContent() {
       )}
 
       {/* Blog/Articles Section */}
-      <section className="py-20">
+      <section className="py-12 sm:py-20">
         <div className="container-wide">
-          <div className="flex justify-between items-end mb-12">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 sm:mb-12 gap-4">
             <div>
-              <h2 className="text-4xl font-light mb-2">Art Insights</h2>
+              <h2 className="text-3xl sm:text-4xl font-light mb-2">Art Insights</h2>
               <div className="accent-line"></div>
               <p className="text-[var(--text-muted)] mt-2">Expert perspectives on the art world</p>
             </div>
@@ -256,7 +256,7 @@ function HomeContent() {
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Article 1 */}
             <article className="group">
               <Link href="/blog/contemporary-art-trends">

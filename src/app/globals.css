@@ -130,8 +130,14 @@ h4 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
 /* Grid layouts */
 .grid-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 2px;
+}
+
+@media (min-width: 640px) {
+  .grid-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
 }
 
 .grid-masonry {
@@ -149,6 +155,33 @@ h4 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
   .grid-masonry {
     columns: 3;
   }
+}
+
+/* Responsive spacing utilities */
+@media (max-width: 639px) {
+  .container-wide {
+    padding: 0 var(--space-sm);
+  }
+  
+  .container-narrow {
+    padding: 0 var(--space-sm);
+  }
+}
+
+/* Mobile-friendly text sizes */
+@media (max-width: 639px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .display-text {
+    font-size: clamp(2rem, 10vw, 3.5rem);
+  }
+  
+  h1 { font-size: clamp(2rem, 6vw, 3rem); }
+  h2 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
+  h3 { font-size: clamp(1.25rem, 4vw, 1.75rem); }
+  h4 { font-size: clamp(1.125rem, 3vw, 1.5rem); }
 }
 
 /* Refined minimal accents */
@@ -182,7 +215,7 @@ html {
 .btn-primary {
   background-color: var(--primary);
   color: var(--background);
-  padding: 0.875rem 1.75rem;
+  padding: 0.75rem 1.5rem;
   border: 2px solid var(--primary);
   border-radius: var(--radius-md);
   font-weight: 500;
@@ -190,6 +223,14 @@ html {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.875rem;
+  display: inline-block;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .btn-primary {
+    padding: 0.875rem 1.75rem;
+  }
 }
 
 .btn-primary:hover {
@@ -201,7 +242,7 @@ html {
 .btn-secondary {
   background-color: transparent;
   color: var(--primary);
-  padding: 0.875rem 1.75rem;
+  padding: 0.75rem 1.5rem;
   border: 2px solid var(--border);
   border-radius: var(--radius-md);
   font-weight: 500;
@@ -209,6 +250,14 @@ html {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.875rem;
+  display: inline-block;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .btn-secondary {
+    padding: 0.875rem 1.75rem;
+  }
 }
 
 .btn-secondary:hover {
@@ -220,7 +269,7 @@ html {
 .btn-accent {
   background-color: var(--secondary);
   color: white;
-  padding: 0.875rem 1.75rem;
+  padding: 0.75rem 1.5rem;
   border: 2px solid var(--secondary);
   border-radius: var(--radius-md);
   font-weight: 500;
@@ -228,6 +277,14 @@ html {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.875rem;
+  display: inline-block;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .btn-accent {
+    padding: 0.875rem 1.75rem;
+  }
 }
 
 .btn-accent:hover {
@@ -342,4 +399,49 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
+}
+
+/* Prevent horizontal overflow on mobile */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Ensure images don't overflow */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Fix for wide tables on mobile */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Responsive image container */
+.responsive-img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* Mobile-friendly margins and padding */
+@media (max-width: 639px) {
+  section {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+  
+  .py-20 {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+  
+  .py-12 {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
 }

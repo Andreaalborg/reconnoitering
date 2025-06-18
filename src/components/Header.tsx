@@ -42,6 +42,19 @@ const Header = () => {
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   
+  // Add body class when mobile menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+  
   // Handle search input
   useEffect(() => {
     // Only search if query has 2+ characters
@@ -138,9 +151,9 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[var(--border)]">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-serif text-[var(--primary)]">
+          <Link href="/" className="text-xl sm:text-2xl font-serif text-[var(--primary)]">
             Reconnoitering
           </Link>
           
@@ -273,7 +286,7 @@ const Header = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
                   placeholder="Search exhibitions..."
-                  className="w-40 bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--text-muted)] text-sm"
+                  className="w-32 lg:w-40 bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--text-muted)] text-sm"
                 />
                 <button 
                   type="submit"
@@ -428,7 +441,7 @@ const Header = () => {
       
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white border-t border-[var(--border)]">
+        <div className="md:hidden bg-white border-t border-[var(--border)] fixed inset-x-0 top-14 sm:top-16 bottom-0 overflow-y-auto z-40">
           <div className="px-4 py-6 space-y-4">
             <form onSubmit={handleSearch} className="flex items-center border border-[var(--border)] rounded-full py-2 px-4 mb-4">
               <input

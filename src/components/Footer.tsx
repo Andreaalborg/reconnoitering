@@ -163,7 +163,7 @@ const Footer = () => {
               </p>
             </div>
             <div>
-              <form className="flex gap-3">
+              <form className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
                   placeholder="Enter your email"
@@ -171,7 +171,7 @@ const Footer = () => {
                 />
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-white text-[var(--primary)] rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center gap-2"
+                  className="px-6 py-2 bg-white text-[var(--primary)] rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   <Mail className="w-4 h-4" />
                   Subscribe
