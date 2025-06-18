@@ -255,6 +255,10 @@ const Header = () => {
               <Link href="/contact" className={`text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors ${pathname === '/contact' ? 'text-[var(--primary)]' : ''}`}>
                 Contact
               </Link>
+              
+              <Link href="/faq" className={`text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors ${pathname === '/faq' ? 'text-[var(--primary)]' : ''}`}>
+                FAQ
+              </Link>
             </nav>
             
             {/* Search Bar */}
@@ -449,6 +453,9 @@ const Header = () => {
               <Link href="/nearby" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Nearby</Link>
               <Link href="/day-planner" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Day Planner</Link>
               <Link href="/tags" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Browse Tags</Link>
+              <Link href="/about" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>About</Link>
+              <Link href="/contact" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Contact</Link>
+              <Link href="/faq" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>FAQ</Link>
             </nav>
             
             {session ? (
