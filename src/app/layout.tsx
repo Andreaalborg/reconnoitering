@@ -4,6 +4,7 @@ import "./globals.css";
 import NextAuthProvider from "@/components/NextAuthProvider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,13 +25,15 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body>
         <NextAuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <AnalyticsProvider>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </AnalyticsProvider>
         </NextAuthProvider>
       </body>
     </html>

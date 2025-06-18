@@ -46,8 +46,6 @@ export default function AdminDashboard() {
     venues: { total: 0 },
     artists: { total: 0 }
   });
-  const [recentExhibitions, setRecentExhibitions] = useState<any[]>([]);
-  const [recentArticles, setRecentArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,27 +54,13 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch statistics (you can implement these endpoints later)
-      // For now, using dummy data
-      setStats({
-        exhibitions: { total: 45, active: 12, upcoming: 8, past: 25 },
-        articles: { total: 23, published: 18, draft: 5, views: 1250 },
-        venues: { total: 15 },
-        artists: { total: 67 }
-      });
-
-      // Fetch recent exhibitions
-      const exhResponse = await fetch('/api/admin/exhibitions?limit=5');
-      if (exhResponse.ok) {
-        const exhData = await exhResponse.json();
-        setRecentExhibitions(exhData.data || []);
-      }
-
-      // Fetch recent articles
-      const artResponse = await fetch('/api/admin/articles?limit=5');
-      if (artResponse.ok) {
-        const artData = await artResponse.json();
-        setRecentArticles(artData.data || []);
+      // Fetch real statistics from API
+      const statsResponse = await fetch('/api/admin/dashboard/stats');
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success) {
+          setStats(statsData.data.stats);
+        }
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -207,86 +191,40 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Exhibitions */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Exhibitions</h3>
-              <Link href="/admin/exhibitions" className="text-sm text-blue-600 hover:text-blue-800">
-                View all →
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {recentExhibitions.length === 0 ? (
-                <p className="text-gray-500 text-sm">No exhibitions yet</p>
-              ) : (
-                recentExhibitions.slice(0, 5).map((exhibition) => (
-                  <div key={exhibition._id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <div className="flex-1">
-                      <Link 
-                        href={`/admin/exhibitions/edit/${exhibition._id}`}
-                        className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                      >
-                        {exhibition.title}
-                      </Link>
-                      <p className="text-xs text-gray-500">
-                        {exhibition.venue?.name || 'No venue'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link 
-                        href={`/exhibition/${exhibition._id}`}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Recent Articles */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Articles</h3>
-              <Link href="/admin/articles" className="text-sm text-blue-600 hover:text-blue-800">
-                View all →
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {recentArticles.length === 0 ? (
-                <p className="text-gray-500 text-sm">No articles yet</p>
-              ) : (
-                recentArticles.slice(0, 5).map((article) => (
-                  <div key={article._id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <div className="flex-1">
-                      <Link 
-                        href={`/admin/articles/edit/${article._id}`}
-                        className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                      >
-                        {article.title}
-                      </Link>
-                      <p className="text-xs text-gray-500">
-                        {article.status === 'published' ? 'Published' : 'Draft'} • {article.views || 0} views
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        article.status === 'published' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {article.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        {/* Quick Links */}
+        <div className="mt-8 bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link 
+              href="/admin/analytics"
+              className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">View Analytics</span>
+            </Link>
+            <Link 
+              href="/"
+              target="_blank"
+              className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Eye className="w-5 h-5 text-gray-600" />
+              <span className="text-sm text-gray-700">View Site</span>
+            </Link>
+            <Link 
+              href="/admin/update-tracker"
+              className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Clock className="w-5 h-5 text-gray-600" />
+              <span className="text-sm text-gray-700">Update Tracker</span>
+            </Link>
+            <Link 
+              href="/faq"
+              target="_blank"
+              className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Settings className="w-5 h-5 text-gray-600" />
+              <span className="text-sm text-gray-700">FAQ</span>
+            </Link>
           </div>
         </div>
 
@@ -311,8 +249,8 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <Eye className="w-5 h-5 text-blue-500" />
               <div>
-                <p className="text-sm font-medium text-gray-900">Total Views</p>
-                <p className="text-xs text-gray-500">{stats.articles.views} this month</p>
+                <p className="text-sm font-medium text-gray-900">Article Views</p>
+                <p className="text-xs text-gray-500">{stats.articles.views} total</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
