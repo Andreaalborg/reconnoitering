@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import GoogleMap from '@/components/GoogleMap';
+import Header from '@/components/Header';
 import { calculateTravelTime } from '@/services/routesService';
 import { exportItineraryToCalendar } from '@/services/calendarExport';
 

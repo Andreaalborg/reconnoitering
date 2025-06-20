@@ -122,8 +122,21 @@ Make sure these are set in Netlify:
 - `NEXTAUTH_URL`
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
+### 5. Missing Header import
+**Error:**
+```
+Type error: Cannot find name 'Header'. Did you mean 'Headers'?
+```
+
+**File affected:**
+- `/src/app/day-planner/page.tsx` (line 594)
+
+**Fix:**
+Added missing import: `import Header from '@/components/Header';`
+
 ## Notes for Future Builds
 1. Always test `npm run build` locally before pushing
 2. Check for TypeScript errors with `npx tsc --noEmit`
 3. Remove all `/dev/` endpoints before production deployment
 4. Keep Sentry temporarily disabled until dependency issues are resolved
+5. Ensure all components are properly imported before use
