@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
 import Venue from '@/models/Venue';
 import mongoose from 'mongoose';
+import * as Sentry from '@sentry/nextjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,12 +75,14 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Error in migration:', error);
+    Sentry.captureException(error, {
+      tags: { api: 'admin-migrate' },
+      extra: { errorMessage: error instanceof Error ? error.message : 'Unknown error' }
+    });
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to migrate exhibitions',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        error: 'Failed to migrate exhibitions'
       },
       { status: 500 }
     );

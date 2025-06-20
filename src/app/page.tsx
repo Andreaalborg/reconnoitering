@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import ExhibitionCard from '@/components/ExhibitionCard';
+import ExhibitionCardSkeleton from '@/components/ExhibitionCardSkeleton';
 import VerticalCalendar from '@/components/VerticalCalendar';
 import { ArrowRight, MapPin, Calendar, Search } from 'lucide-react';
 
@@ -73,9 +74,56 @@ function HomeContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
-      </div>
+      <main className="min-h-screen bg-white">
+        {/* Hero Section Skeleton */}
+        <section className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-gray-200 animate-pulse"></div>
+          <div className="relative z-20 text-center container-narrow py-20">
+            <div className="h-16 bg-gray-300 rounded w-64 mx-auto mb-6 animate-pulse" />
+            <div className="h-6 bg-gray-300 rounded w-96 mx-auto mb-8 animate-pulse" />
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <div className="h-12 bg-gray-300 rounded w-48 animate-pulse" />
+              <div className="h-12 bg-gray-300 rounded w-36 animate-pulse" />
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Search Section Skeleton */}
+        <section className="py-8 sm:py-12 border-y border-[var(--border)]">
+          <div className="container-wide">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 sm:gap-8">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 sm:p-6 border-b sm:border-b-0 border-[var(--border)]">
+                  <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+                  <div>
+                    <div className="h-5 bg-gray-200 rounded w-24 mb-2 animate-pulse" />
+                    <div className="h-4 bg-gray-200 rounded w-32 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Upcoming Exhibitions Skeleton */}
+        <section className="py-12 sm:py-20">
+          <div className="container-wide">
+            <div className="flex justify-between items-end mb-8 sm:mb-12">
+              <div>
+                <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
+                <div className="h-1 bg-gray-200 rounded w-16 animate-pulse" />
+              </div>
+              <div className="h-5 bg-gray-200 rounded w-24 animate-pulse" />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {[...Array(4)].map((_, i) => (
+                <ExhibitionCardSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
     );
   }
 
@@ -98,8 +146,8 @@ function HomeContent() {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero Section - Tate-inspired minimal hero */}
-      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/90 z-10"></div>
+      <section className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white/90 z-10"></div>
         
         {/* Background image from featured exhibition */}
         {(popularExhibitions[0]?.coverImage || popularExhibitions[0]?.imageUrl) && (
@@ -108,23 +156,24 @@ function HomeContent() {
               src={popularExhibitions[0].coverImage || popularExhibitions[0].imageUrl} 
               alt=""
               className="w-full h-full object-cover"
+              loading="eager"
             />
           </div>
         )}
         
-        <div className="relative z-20 text-center container-narrow">
-          <h1 className="display-text mb-6 animate-fade-in">
+        <div className="relative z-20 text-center container-narrow py-20">
+          <h1 className="display-text mb-4 sm:mb-6 animate-fade-in text-white mix-blend-difference">
             Discover Art
-            <br />
-            <span className="text-[var(--secondary)]">Exhibitions</span>
+            <br className="hidden sm:block" />
+            <span className="text-[var(--secondary)] block sm:inline">Exhibitions</span>
           </h1>
-          <div className="accent-line mx-auto mb-8 animate-fade-in-delay"></div>
-          <p className="text-lg text-[var(--text-muted)] mb-12 max-w-2xl mx-auto animate-fade-in-delay-2">
+          <div className="accent-line mx-auto mb-6 sm:mb-8 animate-fade-in-delay bg-white"></div>
+          <p className="text-base sm:text-lg text-white mix-blend-difference mb-8 sm:mb-12 max-w-2xl mx-auto animate-fade-in-delay-2 px-4">
             Explore the world's most compelling art exhibitions, curated for the curious mind
           </p>
           
           {/* Search actions */}
-          <div className="flex flex-wrap gap-4 justify-center animate-fade-in-delay-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center animate-fade-in-delay-3 px-4">
             <Link href="/exhibitions" className="btn-primary">
               EXPLORE ALL EXHIBITIONS
             </Link>
@@ -133,33 +182,40 @@ function HomeContent() {
             </Link>
           </div>
         </div>
+        
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce hidden sm:block">
+          <svg className="w-6 h-6 text-white mix-blend-difference" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </div>
       </section>
 
       {/* Quick Search Section */}
-      <section className="py-12 border-y border-[var(--border)]">
+      <section className="py-8 sm:py-12 border-y border-[var(--border)]">
         <div className="container-wide">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Link href="/nearby" className="group flex items-center gap-4 p-6 hover:bg-[var(--primary-light)] transition-colors">
-              <MapPin className="w-8 h-8 text-[var(--secondary)]" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 sm:gap-8">
+            <Link href="/nearby" className="group flex items-center gap-4 p-4 sm:p-6 hover:bg-[var(--primary-light)] transition-colors border-b sm:border-b-0 border-[var(--border)]">
+              <MapPin className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--secondary)] flex-shrink-0" />
               <div className="text-left">
-                <h3 className="font-semibold text-lg group-hover:underline">Near You</h3>
-                <p className="text-[var(--text-muted)]">Find exhibitions in your area</p>
+                <h3 className="font-semibold text-base sm:text-lg group-hover:underline">Near You</h3>
+                <p className="text-sm text-[var(--text-muted)]">Find exhibitions in your area</p>
               </div>
             </Link>
             
-            <Link href="/calendar" className="group flex items-center gap-4 p-6 hover:bg-[var(--primary-light)] transition-colors">
-              <Calendar className="w-8 h-8 text-[var(--secondary)]" />
+            <Link href="/calendar" className="group flex items-center gap-4 p-4 sm:p-6 hover:bg-[var(--primary-light)] transition-colors border-b sm:border-b-0 border-[var(--border)]">
+              <Calendar className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--secondary)] flex-shrink-0" />
               <div className="text-left">
-                <h3 className="font-semibold text-lg group-hover:underline">This Week</h3>
-                <p className="text-[var(--text-muted)]">What's on right now</p>
+                <h3 className="font-semibold text-base sm:text-lg group-hover:underline">This Week</h3>
+                <p className="text-sm text-[var(--text-muted)]">What's on right now</p>
               </div>
             </Link>
             
-            <Link href="/date-search" className="group flex items-center gap-4 p-6 hover:bg-[var(--primary-light)] transition-colors">
-              <Search className="w-8 h-8 text-[var(--secondary)]" />
+            <Link href="/date-search" className="group flex items-center gap-4 p-4 sm:p-6 hover:bg-[var(--primary-light)] transition-colors">
+              <Search className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--secondary)] flex-shrink-0" />
               <div className="text-left">
-                <h3 className="font-semibold text-lg group-hover:underline">Plan Your Visit</h3>
-                <p className="text-[var(--text-muted)]">Search by specific dates</p>
+                <h3 className="font-semibold text-base sm:text-lg group-hover:underline">Plan Your Visit</h3>
+                <p className="text-sm text-[var(--text-muted)]">Search by specific dates</p>
               </div>
             </Link>
           </div>
@@ -167,15 +223,17 @@ function HomeContent() {
       </section>
 
       {/* Upcoming Exhibitions */}
-      <section className="py-20">
+      <section className="py-12 sm:py-20">
         <div className="container-wide">
-          <div className="flex justify-between items-end mb-12">
+          <div className="flex justify-between items-end mb-8 sm:mb-12">
             <div>
-              <h2 className="text-4xl font-light mb-2">Opening Soon</h2>
+              <h2 className="text-2xl sm:text-4xl font-serif mb-2">Opening Soon</h2>
               <div className="accent-line"></div>
             </div>
-            <Link href="/exhibitions?sort=startDate" className="text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-2">
-              View All <ArrowRight className="w-4 h-4" />
+            <Link href="/exhibitions?sort=startDate" className="text-xs sm:text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-1 sm:gap-2">
+              <span className="hidden sm:inline">View All</span>
+              <span className="sm:hidden">All</span>
+              <ArrowRight className="w-3 sm:w-4 h-3 sm:h-4" />
             </Link>
           </div>
           
@@ -190,14 +248,14 @@ function HomeContent() {
       </section>
 
       {/* Featured Section with Calendar */}
-      <section className="py-20 bg-[var(--primary-light)]">
+      <section className="py-12 sm:py-20 bg-[var(--primary-light)]">
         <div className="container-wide">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
             <div className="lg:col-span-2">
-              <h2 className="text-4xl font-light mb-2">Popular Now</h2>
-              <div className="accent-line mb-12"></div>
+              <h2 className="text-2xl sm:text-4xl font-serif mb-2">Popular Now</h2>
+              <div className="accent-line mb-8 sm:mb-12"></div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                 {popularExhibitions.slice(0, 4).map((exhibition, index) => (
                   <div key={exhibition._id} className="animate-fade-in-delay" style={{ animationDelay: `${index * 0.1}s` }}>
                     <ExhibitionCard exhibition={exhibition} minimal />
@@ -206,9 +264,9 @@ function HomeContent() {
               </div>
             </div>
             
-            <div>
-              <h3 className="text-2xl font-light mb-6">Calendar View</h3>
-              <div className="bg-white p-6 border border-[var(--border)]">
+            <div className="mt-8 lg:mt-0">
+              <h3 className="text-xl sm:text-2xl font-serif mb-4 sm:mb-6">Calendar View</h3>
+              <div className="bg-white p-4 sm:p-6 border border-[var(--border)] rounded-lg">
                 <VerticalCalendar />
               </div>
             </div>
@@ -218,16 +276,18 @@ function HomeContent() {
 
       {/* Personalized Recommendations - Now part of main content flow */}
       {session && recommendedExhibitions.length > 0 && (
-        <section className="py-20 bg-gradient-to-b from-white to-[var(--primary-light)]">
+        <section className="py-12 sm:py-20 bg-gradient-to-b from-white to-[var(--primary-light)]">
           <div className="container-wide">
-            <div className="flex justify-between items-end mb-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 sm:mb-12 gap-4">
               <div>
-                <h2 className="text-4xl font-light mb-2">Curated for You</h2>
+                <h2 className="text-2xl sm:text-4xl font-serif mb-2">Curated for You</h2>
                 <div className="accent-line"></div>
-                <p className="text-[var(--text-muted)] mt-2">Based on your art preferences</p>
+                <p className="text-sm sm:text-base text-[var(--text-muted)] mt-2">Based on your art preferences</p>
               </div>
-              <Link href="/account/preferences" className="text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-2">
-                Update Preferences <ArrowRight className="w-4 h-4" />
+              <Link href="/account/preferences" className="text-xs sm:text-sm uppercase tracking-wider hover:text-[var(--secondary)] transition-colors flex items-center gap-1 sm:gap-2">
+                <span className="hidden sm:inline">Update Preferences</span>
+                <span className="sm:hidden">Preferences</span>
+                <ArrowRight className="w-3 sm:w-4 h-3 sm:h-4" />
               </Link>
             </div>
             

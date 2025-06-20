@@ -7,6 +7,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Exhibition from '@/models/Exhibition';
 import mongoose from 'mongoose';
+import * as Sentry from '@sentry/nextjs';
 
 export async function GET(request: NextRequest) {
   try {
@@ -122,8 +123,12 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error in /api/recommendation:', error);
+    Sentry.captureException(error, {
+      tags: { api: 'recommendation' },
+      extra: { errorMessage: error.message }
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch recommendations', details: error.message },
+      { success: false, error: 'Failed to fetch recommendations' },
       { status: 500 }
     );
   }

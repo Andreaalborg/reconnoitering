@@ -140,6 +140,32 @@ h4 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
   }
 }
 
+/* Responsive exhibition grid */
+.exhibition-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .exhibition-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .exhibition-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .exhibition-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .grid-masonry {
   columns: 1;
   column-gap: var(--space-md);
@@ -418,6 +444,13 @@ html {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Touch device detection for hover states */
+@media (hover: none) and (pointer: coarse) {
+  .touch-device\:opacity-100 {
+    opacity: 1 !important;
   }
 }
 

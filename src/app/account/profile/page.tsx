@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
 
 export default function ProfilePage() {
@@ -36,6 +35,7 @@ export default function ProfilePage() {
       
       // Log the current session data
       console.log('Current session:', session);
+      console.log('Profile image URL:', session.user.image);
     }
   }, [status, session, router]);
   
@@ -164,31 +164,17 @@ export default function ProfilePage() {
   
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
-          </div>
-        </main>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
+        </div>
       </div>
     );
   }
   
-  // To help with demonstrating real image uploads - will show a selection of random profile photos
-  const sampleAvatars = [
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1607746882042-944635dfe10e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&h=200&q=80'
-  ];
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">My Profile</h1>
         
         {error && (
@@ -211,22 +197,6 @@ export default function ProfilePage() {
                 currentImage={profileImage}
                 onImageChange={handleImageChange}
               />
-              
-              {/* Demo avatar selections - use real avatar images for consistency */}
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Choose a Demo Avatar:</h3>
-                <div className="flex flex-wrap gap-2">
-                  {sampleAvatars.map((avatar, index) => (
-                    <button 
-                      key={index}
-                      onClick={() => handleImageChange(avatar)}
-                      className="w-12 h-12 rounded-full overflow-hidden border-2 border-transparent hover:border-rose-500 focus:outline-none focus:border-rose-600"
-                    >
-                      <img src={avatar} alt={`Avatar ${index+1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
             
             <div className="md:col-span-2">
@@ -337,7 +307,6 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
-      </main>
     </div>
   );
 }

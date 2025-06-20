@@ -2,8 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
+import ExhibitionCardSkeleton from '@/components/ExhibitionCardSkeleton';
 import Select from 'react-select';
 
 // Reuse or define the European countries list
@@ -285,7 +285,6 @@ function ExhibitionsContent() {
   
   return (
     <>
-      <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Exhibitions in Europe</h1>
@@ -429,8 +428,13 @@ function ExhibitionsContent() {
         
         {/* Results Section */}
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
+          <div>
+            <div className="mb-4 h-6 bg-gray-200 rounded w-48 animate-pulse" />
+            <div className="exhibition-grid">
+              {[...Array(8)].map((_, i) => (
+                <ExhibitionCardSkeleton key={i} />
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
@@ -455,7 +459,7 @@ function ExhibitionsContent() {
               Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalExhibitions)} of {totalExhibitions} exhibitions
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="exhibition-grid">
               {exhibitions.map((exhibition) => (
                 <ExhibitionCard
                   key={exhibition._id}
@@ -466,6 +470,7 @@ function ExhibitionsContent() {
                   coverImage={exhibition.coverImage}
                   startDate={exhibition.startDate}
                   endDate={exhibition.endDate}
+                  minimal={true}
                 />
               ))}
             </div>

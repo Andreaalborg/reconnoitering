@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -50,10 +51,19 @@ export async function GET(request: Request) {
       });
     } else {
       console.error('Geocoding API error:', data.status, data.error_message);
-      return NextResponse.json({ error: 'Kunne ikke utføre geocoding', details: data.status }, { status: 500 });
+      Sentry.captureMessage(`Geocoding API error: ${data.status}`, {
+        level: 'warning',
+        tags: { api: 'geocode' },
+        extra: { status: data.status, errorMessage: data.error_message }
+      });
+      return NextResponse.json({ error: 'Kunne ikke utføre geocoding' }, { status: 500 });
     }
   } catch (error) {
     console.error('Error with geocoding:', error);
+    Sentry.captureException(error, {
+      tags: { api: 'geocode' },
+      extra: { errorMessage: error instanceof Error ? error.message : 'Unknown error' }
+    });
     return NextResponse.json({ error: 'Kunne ikke utføre geocoding' }, { status: 500 });
   }
 } 

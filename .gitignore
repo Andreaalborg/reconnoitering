@@ -40,6 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Uploaded files
+/public/uploads/avatars/*
+!/public/uploads/avatars/.gitkeep
+
 # Fakturaer og tilbud - IKKE del med kunde
 FAKTURA*.md
 TILBUD*.md

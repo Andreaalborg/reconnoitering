@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Exhibition from '@/models/Exhibition';
 import Venue from '@/models/Venue';
 import mongoose from 'mongoose';
+import * as Sentry from '@sentry/nextjs';
 
 export const dynamic = 'force-dynamic'; // Opt out of caching
 
@@ -224,12 +225,14 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Error fetching exhibitions:', error);
-    // Legg til mer detaljert feilmelding
+    Sentry.captureException(error, {
+      tags: { api: 'exhibitions-get' },
+      extra: { errorMessage: error instanceof Error ? error.message : 'Unknown error' }
+    });
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to fetch exhibitions',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to fetch exhibitions'
       },
       { status: 500 }
     );

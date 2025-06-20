@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/Header';
 
 // Create a client component for the parts that use useSearchParams
 function LoginForm() {
@@ -20,12 +19,18 @@ function LoginForm() {
     // Check if the user just registered
     const registered = searchParams.get('registered');
     if (registered === 'true') {
-      setSuccessMessage('Account created successfully! Please sign in.');
+      setSuccessMessage('Account created successfully! Please check your email to verify your account before signing in.');
+    }
+    
+    // Check if the user just verified their email
+    const verified = searchParams.get('verified');
+    if (verified === 'true') {
+      setSuccessMessage('Email verified successfully! You can now sign in.');
     }
     
     // Check if user was redirected from a protected page
     const callbackUrl = searchParams.get('callbackUrl');
-    if (callbackUrl) {
+    if (callbackUrl && !registered && !verified) {
       setSuccessMessage('Please sign in to continue.');
     }
   }, [searchParams]);
@@ -64,24 +69,24 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h1>
+    <div className="card-minimal p-6 sm:p-8">
+      <h1 className="text-2xl sm:text-3xl font-serif text-[var(--primary)] mb-6 text-center">Sign In</h1>
       
       {error && (
-        <div className="mb-6 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           {error}
         </div>
       )}
       
       {successMessage && (
-        <div className="mb-6 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+        <div className="mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
           {successMessage}
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-2">
             Email Address
           </label>
           <input
@@ -89,13 +94,15 @@ function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+            className="w-full p-3 sm:p-3.5 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--secondary)] focus:border-transparent text-base"
+            placeholder="your@email.com"
             required
+            autoComplete="email"
           />
         </div>
         
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-[var(--foreground)] mb-2">
             Password
           </label>
           <input
@@ -103,15 +110,17 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+            className="w-full p-3 sm:p-3.5 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--secondary)] focus:border-transparent text-base"
+            placeholder="••••••••"
             required
+            autoComplete="current-password"
           />
         </div>
         
-        <div>
+        <div className="pt-2">
           <button
             type="submit"
-            className="w-full bg-rose-500 text-white py-2 px-4 rounded hover:bg-rose-600 transition-colors disabled:bg-rose-300"
+            className="w-full btn-primary py-3 sm:py-3.5 text-base"
             disabled={loading}
           >
             {loading ? 'Signing In...' : 'Sign In'}
@@ -119,13 +128,17 @@ function LoginForm() {
         </div>
       </form>
       
-      <div className="mt-6 text-center">
-        <p className="text-gray-600">
-        Don&apos;t have an account?{' '}
-          <Link href="/auth/register" className="text-rose-500 hover:text-rose-700">
+      <div className="mt-6 text-center space-y-3">
+        <p className="text-[var(--text-muted)]">
+          Don&apos;t have an account?{' '}
+          <Link href="/auth/register" className="text-[var(--secondary)] hover:text-[var(--secondary-hover)] font-medium">
             Create Account
           </Link>
         </p>
+        {/* Future password reset link */}
+        {/* <Link href="/auth/forgot-password" className="text-sm text-[var(--text-muted)] hover:text-[var(--primary)]">
+          Forgot your password?
+        </Link> */}
       </div>
     </div>
   );
@@ -134,13 +147,13 @@ function LoginForm() {
 // Main page component with Suspense
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Suspense fallback={<div className="text-center">Loading...</div>}>
-          <LoginForm />
-        </Suspense>
+    <div className="min-h-screen flex items-center justify-center">
+      <main className="container-narrow py-12 sm:py-16">
+        <div className="max-w-md mx-auto">
+          <Suspense fallback={<div className="text-center">Loading...</div>}>
+            <LoginForm />
+          </Suspense>
+        </div>
       </main>
     </div>
   );

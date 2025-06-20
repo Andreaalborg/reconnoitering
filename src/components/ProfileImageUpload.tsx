@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 interface ProfileImageUploadProps {
@@ -13,15 +13,12 @@ const ProfileImageUpload = ({ currentImage, onImageChange }: ProfileImageUploadP
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // For demonstration purposes, we'll use a placeholder image service
-  // In a real application, you would use a file upload API with proper storage
-  const getRandomPlaceholderImage = () => {
-    // Generate a random ID for the placeholder image (1-1000)
-    const randomId = Math.floor(Math.random() * 1000);
-    return `https://picsum.photos/id/${randomId}/200/200`;
-  };
+  // Update preview when currentImage changes
+  useEffect(() => {
+    setPreviewUrl(currentImage || '');
+  }, [currentImage]);
   
-  const simulateUpload = async (file: File) => {
+  const uploadImage = async (file: File) => {
     setUploading(true);
     setError(null);
     
@@ -33,8 +30,9 @@ const ProfileImageUpload = ({ currentImage, onImageChange }: ProfileImageUploadP
     }
     
     // Check file type
-    if (!file.type.startsWith('image/')) {
-      setError('Only image files are allowed');
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Only JPEG, PNG, GIF and WebP images are allowed');
       setUploading(false);
       return;
     }
@@ -44,20 +42,33 @@ const ProfileImageUpload = ({ currentImage, onImageChange }: ProfileImageUploadP
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
       
-      // Simulate an upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Upload the file to the server
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // In a real application, you would upload the file to a server here
-      // and get back a permanent URL
-      const uploadedImageUrl = getRandomPlaceholderImage();
+      const response = await fetch('/api/user/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload image');
+      }
       
       // Set the uploaded image URL
-      setPreviewUrl(uploadedImageUrl);
-      onImageChange(uploadedImageUrl);
+      setPreviewUrl(data.url);
+      onImageChange(data.url);
+      
+      // Clean up the object URL
+      URL.revokeObjectURL(objectUrl);
       
     } catch (err) {
       console.error('Error uploading image:', err);
-      setError('Failed to upload image. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to upload image. Please try again.');
+      // Reset preview on error
+      setPreviewUrl(currentImage || '');
     } finally {
       setUploading(false);
     }
@@ -66,15 +77,8 @@ const ProfileImageUpload = ({ currentImage, onImageChange }: ProfileImageUploadP
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      simulateUpload(file);
+      uploadImage(file);
     }
-  };
-  
-  const handlePlaceholderClick = () => {
-    // For demonstration: set a random placeholder image
-    const placeholderUrl = getRandomPlaceholderImage();
-    setPreviewUrl(placeholderUrl);
-    onImageChange(placeholderUrl);
   };
   
   return (
@@ -88,6 +92,7 @@ const ProfileImageUpload = ({ currentImage, onImageChange }: ProfileImageUploadP
               fill
               className="object-cover"
               sizes="128px"
+              unoptimized={previewUrl.startsWith('/uploads/')}
             />
             <button
               type="button"
@@ -123,22 +128,19 @@ const ProfileImageUpload = ({ currentImage, onImageChange }: ProfileImageUploadP
           <span>Upload Photo</span>
           <input 
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
             onChange={handleImageChange}
             className="sr-only"
+            disabled={uploading}
           />
         </label>
         
-        <button
-          type="button"
-          onClick={handlePlaceholderClick}
-          className="bg-gray-200 border border-gray-300 rounded-md py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          Use Random Avatar
-        </button>
+        <p className="text-xs text-gray-500 text-center">
+          Max 2MB - JPEG, PNG, GIF or WebP
+        </p>
         
         {error && (
-          <div className="text-red-500 text-sm mt-1 text-center">
+          <div className="text-red-500 text-sm mt-2 text-center">
             {error}
           </div>
         )}

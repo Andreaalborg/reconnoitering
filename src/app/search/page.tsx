@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
 import Link from 'next/link';
 
@@ -77,7 +76,6 @@ function SearchContent() {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Search Exhibitions</h1>

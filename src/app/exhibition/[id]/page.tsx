@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import Header from '@/components/Header';
 import CalendarExportButtons from '@/components/CalendarExportButtons';
 import GoogleMap from '@/components/GoogleMap';
 
@@ -252,8 +251,7 @@ function ExhibitionDetailContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
           </div>
@@ -265,8 +263,7 @@ function ExhibitionDetailContent() {
   if (error || !exhibition) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Exhibition not found</h1>
             <p className="mt-4 text-lg text-gray-600">The exhibition you're looking for does not exist or has been removed.</p>
@@ -291,7 +288,6 @@ function ExhibitionDetailContent() {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/exhibitions" className="inline-flex items-center text-rose-500 hover:text-rose-700 mb-6">

@@ -3,7 +3,6 @@
 export const dynamic = 'force-dynamic';
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
 import GoogleMap from '@/components/GoogleMap';
 
 // Updated interface for Venue data for map markers
@@ -116,33 +115,51 @@ function MapPageContent() {
 
   return (
     <>
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Venue Map</h1>
+      <main className="container-wide py-6 sm:py-8">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-serif text-[var(--primary)]">Venue Map</h1>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="card-minimal overflow-hidden">
           {loading && !venues.length ? (
-            <div className="flex justify-center items-center h-96">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
+            <div className="flex justify-center items-center h-[50vh] sm:h-96">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--secondary)]"></div>
             </div>
           ) : error ? (
-            <div className="p-6 text-red-500">{error}</div>
+            <div className="p-4 sm:p-6 text-red-500">{error}</div>
           ) : (
-            <div className="h-[600px]">
-              <GoogleMap
-                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-                center={mapCenter}
-                zoom={12}
-                markers={mapMarkers}
-                userPosition={userPosition}
-                showSearchBox={true}
-                onPlaceSelected={handlePlaceSelected}
-                height="600px"
-              />
+            <div className="relative">
+              <div className="h-[calc(100vh-200px)] sm:h-[500px] md:h-[600px] lg:h-[700px]">
+                <GoogleMap
+                  apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+                  center={mapCenter}
+                  zoom={12}
+                  markers={mapMarkers}
+                  userPosition={userPosition}
+                  showSearchBox={true}
+                  onPlaceSelected={handlePlaceSelected}
+                  height="100%"
+                />
+              </div>
+              <div className="absolute bottom-4 left-4 right-4 sm:hidden">
+                <div className="bg-white/90 backdrop-blur-sm rounded-lg p-3 text-sm">
+                  <p className="text-[var(--text-muted)]">Tap markers to view venues</p>
+                </div>
+              </div>
             </div>
           )}
+        </div>
+        
+        {/* Mobile info */}
+        <div className="mt-4 sm:hidden">
+          <div className="bg-[var(--primary-light)] rounded-lg p-4">
+            <h2 className="font-semibold mb-2">Tips for mobile:</h2>
+            <ul className="text-sm text-[var(--text-muted)] space-y-1">
+              <li>• Pinch to zoom in/out</li>
+              <li>• Tap venue markers for details</li>
+              <li>• Use search to find locations</li>
+            </ul>
+          </div>
         </div>
       </main>
     </>

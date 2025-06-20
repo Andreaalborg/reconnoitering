@@ -425,7 +425,8 @@ const Header = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden text-[var(--primary)]"
+              className="md:hidden text-[var(--primary)] p-2 -mr-2"
+              aria-label="Toggle menu"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 {menuOpen ? (
@@ -440,50 +441,66 @@ const Header = () => {
       </div>
       
       {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="md:hidden bg-white border-t border-[var(--border)] fixed inset-x-0 top-14 sm:top-16 bottom-0 overflow-y-auto z-40">
+      <div className={`md:hidden bg-white border-t border-[var(--border)] fixed inset-x-0 top-14 sm:top-16 bottom-0 overflow-y-auto z-40 transition-transform duration-300 ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="px-4 py-6 space-y-4">
-            <form onSubmit={handleSearch} className="flex items-center border border-[var(--border)] rounded-full py-2 px-4 mb-4">
+            <form onSubmit={handleSearch} className="flex items-center border border-[var(--border)] rounded-full py-2.5 px-4 mb-6 bg-[var(--primary-light)]">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search exhibitions..."
-                className="flex-1 bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--text-muted)]"
+                className="flex-1 bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--text-muted)] text-base"
               />
-              <button type="submit" className="ml-2 text-[var(--secondary)]">
+              <button type="submit" className="ml-2 text-[var(--secondary)] p-1">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
               </button>
             </form>
             
-            <nav className="space-y-2">
-              <Link href="/" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Home</Link>
-              <Link href="/exhibitions" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>All Exhibitions</Link>
-              <Link href="/calendar" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Calendar</Link>
-              <Link href="/map" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Map</Link>
-              <Link href="/nearby" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Nearby</Link>
-              <Link href="/day-planner" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Day Planner</Link>
-              <Link href="/tags" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Browse Tags</Link>
-              <Link href="/about" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>About</Link>
-              <Link href="/contact" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>Contact</Link>
-              <Link href="/faq" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>FAQ</Link>
+            <nav className="space-y-1">
+              <Link href="/" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Home</Link>
+              
+              <div className="py-2">
+                <h3 className="px-4 text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Discover</h3>
+                <Link href="/exhibitions" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>All Exhibitions</Link>
+                <Link href="/calendar" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Calendar View</Link>
+                <Link href="/tags" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Browse by Tags</Link>
+              </div>
+              
+              <div className="py-2">
+                <h3 className="px-4 text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Plan</h3>
+                <Link href="/date-search" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Search by Date</Link>
+                <Link href="/day-planner" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Day Planner</Link>
+                <Link href="/nearby" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Nearby Me</Link>
+              </div>
+              
+              <div className="py-2">
+                <h3 className="px-4 text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">More</h3>
+                <Link href="/map" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Interactive Map</Link>
+                <Link href="/about" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>About</Link>
+                <Link href="/contact" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>Contact</Link>
+                <Link href="/faq" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>FAQ</Link>
+              </div>
             </nav>
             
             {session ? (
-              <div className="pt-4 border-t border-[var(--border)] space-y-2">
-                <Link href="/account/profile" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+              <div className="pt-4 mt-4 border-t border-[var(--border)] space-y-1">
+                <div className="px-4 pb-3">
+                  <p className="font-medium text-[var(--foreground)]">{session.user?.name || 'User'}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{session.user?.email}</p>
+                </div>
+                <Link href="/account/profile" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>
                   My Profile
                 </Link>
-                <Link href="/account/favorites" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+                <Link href="/account/favorites" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>
                   My Favorites
                 </Link>
-                <Link href="/account/preferences" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+                <Link href="/account/preferences" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>
                   Preferences
                 </Link>
                 {session.user?.role === 'admin' && (
-                  <Link href="/admin/dashboard" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+                  <Link href="/admin/dashboard" className="block py-3 px-4 text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>
                     Admin Dashboard
                   </Link>
                 )}
@@ -492,14 +509,14 @@ const Header = () => {
                     setMenuOpen(false);
                     signOut({ callbackUrl: '/' });
                   }}
-                  className="block w-full text-left py-2 text-[var(--foreground)]"
+                  className="block w-full text-left py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2"
                 >
                   Sign Out
                 </button>
               </div>
             ) : (
-              <div className="pt-4 border-t border-[var(--border)] space-y-2">
-                <Link href="/auth/login" className="block py-2 text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+              <div className="pt-4 mt-4 border-t border-[var(--border)] space-y-3">
+                <Link href="/auth/login" className="block py-3 px-4 text-center text-[var(--foreground)] hover:bg-[var(--primary-light)] rounded-lg transition-colors" onClick={() => setMenuOpen(false)}>
                   Sign In
                 </Link>
                 <Link href="/auth/register" className="btn-primary block text-center" onClick={() => setMenuOpen(false)}>
@@ -509,7 +526,6 @@ const Header = () => {
             )}
           </div>
         </div>
-      )}
     </header>
   );
 };

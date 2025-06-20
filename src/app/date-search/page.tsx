@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Header from '@/components/Header';
 import ExhibitionCard from '@/components/ExhibitionCard';
 import Link from 'next/link';
 import Select from 'react-select';
@@ -356,7 +355,6 @@ function DateSearchContent() {
   
   return (
     <>
-      <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Find Exhibitions by Date</h1>

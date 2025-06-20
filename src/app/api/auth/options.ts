@@ -2,6 +2,18 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { NextAuthOptions } from 'next-auth';
+import bcrypt from 'bcrypt';
+import * as Sentry from '@sentry/nextjs';
+
+// Validate that NEXTAUTH_SECRET is set
+if (!process.env.NEXTAUTH_SECRET) {
+  const error = new Error('NEXTAUTH_SECRET environment variable is not set. This is required for production security.');
+  Sentry.captureException(error, {
+    level: 'fatal',
+    tags: { security: 'critical' }
+  });
+  throw error;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,11 +32,18 @@ export const authOptions: NextAuthOptions = {
         const user = await User.findOne({ email: credentials.email });
         
         if (!user) {
-          return null;
+          throw new Error('No user found with this email');
         }
         
-        // For enkel test - vi kan bruke bcrypt senere for sikkerhet
-        if (credentials.password === user.password) {
+        // Sjekk om e-post er verifisert
+        if (!user.emailVerified) {
+          throw new Error('Please verify your email before logging in');
+        }
+        
+        // Verifiser passord med bcrypt
+        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+        
+        if (isValidPassword) {
           return {
             id: user._id.toString(),
             email: user.email,
@@ -34,7 +53,7 @@ export const authOptions: NextAuthOptions = {
           };
         }
         
-        return null;
+        throw new Error('Invalid password');
       }
     })
   ],
@@ -67,7 +86,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     }
   },
-  secret: process.env.NEXTAUTH_SECRET || "THIS_IS_A_VERY_SECURE_SECRET_FOR_RECONNOITERING_APP",
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 dager

@@ -3,7 +3,6 @@
 import React from 'react';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
 import Link from 'next/link';
 import Select from 'react-select';
 
@@ -271,27 +270,26 @@ function CalendarContent() {
 
   return (
     <>
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">Exhibition Calendar</h1>
-            <div className="flex items-center space-x-4">
-              <button onClick={goToPreviousMonth} className="p-2 rounded-full hover:bg-gray-100" aria-label="Previous month">
+      <main className="container-wide py-6 sm:py-8">
+        <div className="card-minimal p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl font-serif text-[var(--primary)] mb-4 sm:mb-0">Exhibition Calendar</h1>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <button onClick={goToPreviousMonth} className="p-2 rounded-lg hover:bg-[var(--primary-light)] transition-colors" aria-label="Previous month">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
               </button>
-              <div className="text-lg font-medium text-center w-32">
+              <div className="text-base sm:text-lg font-medium text-center min-w-[120px] sm:w-32">
                  {formatHeaderDate(view.year, view.month)}
               </div>
-              <button onClick={goToNextMonth} className="p-2 rounded-full hover:bg-gray-100" aria-label="Next month">
+              <button onClick={goToNextMonth} className="p-2 rounded-lg hover:bg-[var(--primary-light)] transition-colors" aria-label="Next month">
                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
               </button>
             </div>
           </div>
           
-          <div className="flex flex-col md:flex-row md:space-x-4 mb-6">
-             <div className="w-full md:w-1/2 lg:w-1/3 mb-4 md:mb-0">
-               <label htmlFor="countries-select" className="block text-sm font-medium text-gray-700 mb-1">Filter by Country</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+             <div className="w-full">
+               <label htmlFor="countries-select" className="block text-sm font-medium text-[var(--foreground)] mb-1">Filter by Country</label>
                <Select<SelectOption, true> 
                  id="countries-select" instanceId="countries-select-instance" isMulti
                  options={europeanCountryOptions} value={filters.countries} 
@@ -302,8 +300,8 @@ function CalendarContent() {
                  closeMenuOnSelect={false}
                />
              </div>
-             <div className="w-full md:w-1/2 lg:w-1/3">
-               <label htmlFor="city-select" className="block text-sm font-medium text-gray-700 mb-1">Filter by City</label>
+             <div className="w-full">
+               <label htmlFor="city-select" className="block text-sm font-medium text-[var(--foreground)] mb-1">Filter by City</label>
                <Select<SelectOption> 
                  id="city-select" instanceId="city-select-instance" 
                  options={cityOptions} value={filters.city} 
@@ -318,15 +316,17 @@ function CalendarContent() {
           </div>
           
           {loading ? (
-            <div className="flex justify-center items-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div></div>
+            <div className="flex justify-center items-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--secondary)]"></div></div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">{error}</div>
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>
           ) : (
-            <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-px border-l border-t border-gray-200 bg-gray-200">
-              <div className="bg-gray-50 py-2 pl-1 pr-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r border-b border-gray-200">Wk</div>
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                <div key={`header-${day}`} className="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r border-b border-gray-200">{day}</div>
-              ))}
+            <>
+              {/* Desktop Calendar */}
+              <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-px border-l border-t border-[var(--border)] bg-[var(--border)]">
+                <div className="bg-[var(--primary-light)] py-2 pl-1 pr-2 text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider border-r border-b border-[var(--border)]">Wk</div>
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                  <div key={`header-${day}`} className="bg-[var(--primary-light)] py-2 text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider border-r border-b border-[var(--border)]">{day}</div>
+                ))}
               
               {calendarCells.map((cell, index) => {
                   const isMonday = cell.date.getDay() === 1;
@@ -365,11 +365,62 @@ function CalendarContent() {
                     </React.Fragment>
                   );
               })}
-            </div>
+              </div>
+              
+              {/* Mobile Calendar */}
+              <div className="sm:hidden">
+                <div className="space-y-3">
+                  {calendarCells.filter(cell => !cell.weekNumber).map((cell) => {
+                    const dateStr = formatDateString(cell.date);
+                    const dayExhibitions = getExhibitionsForDate(exhibitions, cell.date);
+                    if (!cell.isCurrentMonth || dayExhibitions.length === 0) return null;
+                    
+                    return (
+                      <div
+                        key={dateStr}
+                        className={`rounded-lg p-3 ${cell.isToday ? 'bg-[var(--secondary)]/10 border-2 border-[var(--secondary)]' : 'bg-[var(--primary-light)]'}`}
+                        onClick={() => handleDayClick(dateStr)}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className={`font-semibold ${cell.isToday ? 'text-[var(--secondary)]' : 'text-[var(--primary)]'}`}>
+                            {cell.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </div>
+                          <div className="text-sm text-[var(--text-muted)]">
+                            {dayExhibitions.length} exhibition{dayExhibitions.length > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {dayExhibitions.slice(0, 3).map((exhibition) => (
+                            <Link 
+                              key={exhibition._id} 
+                              href={`/exhibition/${exhibition._id}`}
+                              className="block text-sm truncate hover:text-[var(--secondary)] transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {exhibition.title}
+                            </Link>
+                          ))}
+                          {dayExhibitions.length > 3 && (
+                            <div className="text-sm text-[var(--text-muted)]">
+                              +{dayExhibitions.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {calendarCells.filter(cell => !cell.weekNumber && cell.isCurrentMonth && getExhibitionsForDate(exhibitions, cell.date).length > 0).length === 0 && (
+                  <div className="text-center py-8 text-[var(--text-muted)]">
+                    No exhibitions this month
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
         <div className="text-center mb-8">
-          <Link href="/date-search" className="text-rose-500 hover:underline">Go to date search to plan a specific day</Link>
+          <Link href="/date-search" className="text-[var(--secondary)] hover:underline">Go to date search to plan a specific day</Link>
         </div>
       </main>
     </>

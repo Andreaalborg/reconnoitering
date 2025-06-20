@@ -8,6 +8,11 @@ export interface IUser extends Document {
   name: string;
   role: string;
   image?: string;
+  emailVerified: boolean;
+  verificationToken?: string;
+  verificationTokenExpires?: Date;
+  resetPasswordToken?: string;
+  resetPasswordTokenExpires?: Date;
   favoriteExhibitions?: string[];
   preferences?: {
     preferredTags?: string[];
@@ -41,6 +46,22 @@ const UserSchema: Schema = new Schema({
   image: {
     type: String,
     default: ''
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: {
+    type: String
+  },
+  verificationTokenExpires: {
+    type: Date
+  },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordTokenExpires: {
+    type: Date
   },
   favoriteExhibitions: [{
     type: mongoose.Schema.Types.ObjectId,
