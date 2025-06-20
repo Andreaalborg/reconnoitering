@@ -19,7 +19,8 @@
       "Bash(npx @sentry/wizard@latest:*)",
       "Bash(cp:*)",
       "Bash(npm cache clean:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git revert:*)"
     ],
     "deny": []
   }

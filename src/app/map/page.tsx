@@ -161,7 +161,6 @@ function MapPageContent() {
   
   // Handle map click for location selection
   const handleMapClick = useCallback((location: { lat: number; lng: number }) => {
-    console.log('Map clicked:', location, 'isSelectingLocation:', isSelectingLocationRef.current);
     if (isSelectingLocationRef.current) {
       setSelectedLocation(location);
       setIsSelectingLocation(false);
