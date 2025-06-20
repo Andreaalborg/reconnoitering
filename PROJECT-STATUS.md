@@ -1,5 +1,5 @@
 # 📊 Project Status - Reconnoitering
-**Last Updated:** 2025-06-20
+**Last Updated:** 2025-06-20 (16:30)
 
 ## 🚀 Current Deployment Status
 - **Production URL:** Deployed on Netlify (tidligere Vercel)
@@ -9,6 +9,8 @@
   - Sentry temporarily disabled due to "Illegal invocation" error in production
 
 ## 🆕 Recent Changes (2025-06-20)
+
+### Morning Updates
 - ✅ Fixed Sentry configuration issues (temporarily disabled in next.config.mjs)
 - ✅ Created instrumentation.ts for proper Sentry setup
 - ✅ Added loading skeletons for exhibitions and home page
@@ -23,16 +25,43 @@
 - ✅ Fixed getExhibitionsForDate function calls (removed extra argument)
 - ✅ Added missing handleDayClick function for mobile calendar navigation
 
+### Afternoon Updates - Customer Feedback Implementation
+- ✅ **Enhanced Map with Booking.com-style markers**
+  - Custom venue markers showing exhibition count
+  - Hover tooltips with venue info, exhibitions, and images
+  - Visual indicators for closed venues
+  - Improved hover behavior with delay
+  
+- ✅ **Location Selection & Radius Filter**
+  - Three modes: "All Venues", "Near Me", "Choose Location"
+  - Click on map to select any location (vacation planning)
+  - Adjustable radius filter (1-50km)
+  - Visual radius circle on map
+  - Real-time venue filtering based on distance
+  
+- ✅ **New /venues Page**
+  - Complete listing of all venues
+  - Filters: search, country, city, exhibitions only
+  - Shows exhibition count and closure status
+  - Added to navbar under Explore section
+  
+- ✅ **Venue Detail Pages** (/venues/[id])
+  - Full venue information
+  - Current and upcoming exhibitions
+  - Embedded map with directions link
+  - Clear closure day indicators
+
 ## 🎯 What's Working
 
 ### Core Features
 - ✅ User registration and login (with security features)
 - ✅ Exhibition browsing and search
-- ✅ Map view with locations
+- ✅ **Enhanced Map view with vacation planning mode**
 - ✅ Calendar functionality
 - ✅ Day planner for exhibitions
 - ✅ Favorites system
 - ✅ Tags page for filtering
+- ✅ **Venues listing and detail pages**
 - ✅ Admin dashboard (basic)
 
 ### Recent Fixes (2025-06-19)
@@ -135,20 +164,25 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-api-key
 
 ### 📋 Pending Tasks
 
-#### 🆕 Customer Feedback (2025-06-20)
-- [ ] Update interactive map to be more like booking.com:
-  - Show pins for ALL venues (not just on search/filter)
-  - Add hover functionality with quick view info
-  - Display exhibitions, opening hours, etc. in hover tooltip
-- [ ] Enhance "Nearby me" feature:
-  - Keep current geolocation functionality
-  - Add option to choose any location worldwide
-  - Allow setting custom radius for vacation planning
-  - Example: Planning Paris trip, see venues around chosen Paris location
+#### 🆕 Customer Feedback (2025-06-20) - COMPLETED ✅
+- [x] Update interactive map to be more like booking.com:
+  - Show pins for ALL venues (not just on search/filter) ✓
+  - Add hover functionality with quick view info ✓
+  - Display exhibitions, opening hours, etc. in hover tooltip ✓
+- [x] Enhance "Nearby me" feature:
+  - Keep current geolocation functionality ✓
+  - Add option to choose any location worldwide ✓
+  - Allow setting custom radius for vacation planning ✓
+  - Example: Planning Paris trip, see venues around chosen Paris location ✓
 - [ ] Improve venue closing time visibility:
   - Show "Closed on Mondays" etc. when previewing exhibitions
   - Use small text or red color for emphasis
   - Make closure information more prominent
+
+#### New Tasks
+- [ ] Add transport planning between venues
+- [ ] Integrate location selection in /exhibitions and /day-planner
+- [ ] Add route optimization for multiple venues
 
 #### Previous Tasks
 - [ ] Optimize bundle size and performance

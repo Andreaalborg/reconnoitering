@@ -5,24 +5,31 @@ Create an elegant, user-friendly art exhibition discovery platform that helps ar
 
 ## MVP Goals
 
-### 🆕 Customer Feedback Priorities (2025-06-20)
-1. **Interactive Map Improvements** 🗺️
-   - Transform map to be more like booking.com
-   - Show ALL venue pins by default
-   - Implement hover tooltips with quick venue info
-   - Display exhibitions, opening hours in hover state
+### 🆕 Customer Feedback Implementation (2025-06-20) - COMPLETED ✅
+
+1. **Interactive Map Improvements** 🗺️ ✓
+   - Transformed map to be more like booking.com
+   - Shows ALL venue pins by default with exhibition count
+   - Hover tooltips with venue info, exhibitions, and images
+   - Visual indicators for closed venues
    
-2. **Enhanced Location Features** 📍
-   - Maintain current "Nearby me" functionality
-   - Add vacation planning mode:
-     - Choose any global location as center point
-     - Set custom radius around chosen location
-     - Essential for trip planning (e.g., Paris vacation)
+2. **Enhanced Location Features** 📍 ✓
+   - Maintained "Nearby me" functionality
+   - Added vacation planning mode:
+     - Click anywhere on map to select location
+     - Adjustable radius filter (1-50km)
+     - Visual radius circle on map
+     - Real-time venue filtering
    
-3. **Venue Status Visibility** 🕐
-   - Clear closure information on exhibition previews
-   - "Closed on Mondays" type messaging
-   - Use visual indicators (red text/small font)
+3. **Venue Pages & Navigation** 🏛️ ✓
+   - Created /venues listing page with filters
+   - Added venue detail pages (/venues/[id])
+   - Integrated venues in navbar under Explore
+   
+4. **Venue Status Visibility** 🕐 (Partially Complete)
+   - Clear closure indicators on venue pages
+   - "CLOSED TODAY" badges on map and listings
+   - Still need to add to exhibition preview cards
 
 ### High Priority (Must have for MVP)
 1. **Design/Layout Overhaul** ⏳
