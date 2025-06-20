@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import Image from 'next/image';
+import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
 // --- Icons for Mega Menu ---
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
@@ -134,6 +135,7 @@ const Header = () => {
   const exploreMenuItems = {
     discover: [
       { href: "/exhibitions", title: "All Exhibitions", description: "Browse our full catalog", icon: <ListIcon /> },
+      { href: "/venues", title: "All Venues", description: "Museums & galleries", icon: <BuildingOfficeIcon className="w-5 h-5" /> },
       { href: "/calendar", title: "Calendar View", description: "Monthly exhibition view", icon: <CalendarIcon /> },
       { href: "/tags", title: "Browse by Tags", description: "Explore categories", icon: <TagIcon /> },
     ],

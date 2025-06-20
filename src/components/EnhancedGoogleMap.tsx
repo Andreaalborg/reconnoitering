@@ -137,17 +137,19 @@ export default function EnhancedGoogleMap({
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         padding: 16px;
-        min-width: 280px;
-        max-width: 320px;
+        min-width: 320px;
+        max-width: 400px;
         z-index: 1000;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
-        pointer-events: none;
+        pointer-events: auto;
       }
-      .custom-marker:hover .marker-tooltip {
+      .custom-marker:hover .marker-tooltip,
+      .marker-tooltip:hover {
         opacity: 1;
         visibility: visible;
+        transition-delay: 0.2s;
       }
       .tooltip-header {
         border-bottom: 1px solid #e5e7eb;
@@ -178,17 +180,35 @@ export default function EnhancedGoogleMap({
         margin-top: 8px;
       }
       .exhibition-item {
-        padding: 8px 0;
+        display: flex;
+        gap: 12px;
+        padding: 12px 0;
         border-bottom: 1px solid #f3f4f6;
       }
       .exhibition-item:last-child {
         border-bottom: none;
+      }
+      .exhibition-image {
+        width: 60px;
+        height: 60px;
+        border-radius: 4px;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: #f3f4f6;
+      }
+      .exhibition-info {
+        flex: 1;
+        min-width: 0;
       }
       .exhibition-title {
         font-size: 14px;
         font-weight: 500;
         color: #111827;
         margin: 0 0 2px 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
       .exhibition-dates {
         font-size: 12px;
@@ -228,16 +248,23 @@ export default function EnhancedGoogleMap({
 
     if (venue.currentExhibitions && venue.currentExhibitions.length > 0) {
       tooltipHTML += '<div class="tooltip-exhibitions">';
-      venue.currentExhibitions.slice(0, 3).forEach(exhibition => {
+      venue.currentExhibitions.slice(0, 5).forEach(exhibition => {
+        const imageHtml = exhibition.imageUrl 
+          ? `<img src="${exhibition.imageUrl}" alt="${exhibition.title}" class="exhibition-image" onerror="this.style.display='none'">`
+          : '<div class="exhibition-image" style="background: #e5e7eb;"></div>';
+          
         tooltipHTML += `
           <div class="exhibition-item">
-            <h4 class="exhibition-title">${exhibition.title}</h4>
-            <div class="exhibition-dates">${formatDate(exhibition.startDate)} - ${formatDate(exhibition.endDate)}</div>
+            ${imageHtml}
+            <div class="exhibition-info">
+              <h4 class="exhibition-title">${exhibition.title}</h4>
+              <div class="exhibition-dates">${formatDate(exhibition.startDate)} - ${formatDate(exhibition.endDate)}</div>
+            </div>
           </div>
         `;
       });
-      if (venue.currentExhibitions.length > 3) {
-        tooltipHTML += `<div class="exhibition-item"><em>+${venue.currentExhibitions.length - 3} more exhibitions</em></div>`;
+      if (venue.currentExhibitions.length > 5) {
+        tooltipHTML += `<div style="text-align: center; padding: 8px 0; font-size: 13px; color: #6b7280;"><em>+${venue.currentExhibitions.length - 5} more exhibitions</em></div>`;
       }
       tooltipHTML += '</div>';
     } else {
