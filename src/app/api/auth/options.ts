@@ -3,15 +3,11 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { NextAuthOptions } from 'next-auth';
 import bcrypt from 'bcrypt';
-import * as Sentry from '@sentry/nextjs';
 
 // Validate that NEXTAUTH_SECRET is set
 if (!process.env.NEXTAUTH_SECRET) {
   const error = new Error('NEXTAUTH_SECRET environment variable is not set. This is required for production security.');
-  Sentry.captureException(error, {
-    level: 'fatal',
-    tags: { security: 'critical' }
-  });
+  console.error('CRITICAL:', error.message);
   throw error;
 }
 

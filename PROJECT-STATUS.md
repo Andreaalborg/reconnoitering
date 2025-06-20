@@ -4,7 +4,9 @@
 ## 🚀 Current Deployment Status
 - **Production URL:** Deployed on Netlify (tidligere Vercel)
 - **Status:** ✅ Live and functional
-- **Known Issues:** Email verification only works in development (logs to console)
+- **Known Issues:** 
+  - Email verification only works in development (logs to console)
+  - Sentry temporarily disabled due to "Illegal invocation" error in production
 
 ## 🆕 Recent Changes (2025-06-20)
 - ✅ Fixed Sentry configuration issues (temporarily disabled in next.config.mjs)
