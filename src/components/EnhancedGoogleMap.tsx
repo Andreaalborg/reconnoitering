@@ -59,9 +59,9 @@ export default function EnhancedGoogleMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const markerRefs = useRef<{ [key: string]: google.maps.Marker }>({});
-  const userMarkerRef = useRef<google.maps.Marker | null>(null);
-  const selectedLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const markerRefs = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
+  const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const selectedLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -290,102 +290,67 @@ export default function EnhancedGoogleMap({
   };
 
   // Function to add enhanced markers
-  const addEnhancedMarker = useCallback((markerData: EnhancedMapMarker, map: google.maps.Map | null) => {
+  const addEnhancedMarker = useCallback(async (markerData: EnhancedMapMarker, map: google.maps.Map | null) => {
     if (!map || !markerData.position || !markerData.id) return;
+    if (!google.maps.marker?.AdvancedMarkerElement) {
+      console.warn('AdvancedMarkerElement not available');
+      return;
+    }
 
-    const hasExhibitions = markerData.exhibitionCount && markerData.exhibitionCount > 0;
-    const isClosed = isClosedToday(markerData.defaultClosedDays);
+    const content = createMarkerContent(markerData);
     
-    // Create a custom marker icon
-    const marker = new google.maps.Marker({
-      position: markerData.position,
+    const marker = new google.maps.marker.AdvancedMarkerElement({
       map,
-      title: markerData.title,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: hasExhibitions ? 10 : 8,
-        fillColor: hasExhibitions ? '#e11d48' : '#6b7280',
-        fillOpacity: isClosed ? 0.6 : 1,
-        strokeColor: 'white',
-        strokeWeight: 2,
-      },
-      label: {
-        text: String(markerData.exhibitionCount || '0'),
-        color: 'white',
-        fontSize: '12px',
-        fontWeight: 'bold',
-      }
+      position: markerData.position,
+      content: content,
     });
 
     markerRefs.current[markerData.id] = marker;
 
-    // Create info window content
-    let infoContent = `
-      <div style="min-width: 280px; max-width: 320px;">
-        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">${markerData.title}</h3>
-        <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px 0;">${markerData.address || ''} ${markerData.city}, ${markerData.country}</p>
-        ${isClosed ? `<span style="background: #fef2f2; color: #dc2626; font-size: 11px; padding: 2px 6px; border-radius: 4px;">Closed today (${getDayName()})</span>` : ''}
-    `;
-
-    if (markerData.currentExhibitions && markerData.currentExhibitions.length > 0) {
-      infoContent += '<div style="margin-top: 12px;">';
-      markerData.currentExhibitions.slice(0, 3).forEach(exhibition => {
-        infoContent += `
-          <div style="padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
-            <h4 style="font-size: 14px; font-weight: 500; margin: 0 0 2px 0;">${exhibition.title}</h4>
-            <div style="font-size: 12px; color: #6b7280;">${formatDate(exhibition.startDate)} - ${formatDate(exhibition.endDate)}</div>
-          </div>
-        `;
-      });
-      infoContent += '</div>';
-    }
-
-    infoContent += `<a href="/venues/${markerData.id}" style="display: inline-block; margin-top: 12px; color: #e11d48; font-size: 13px; font-weight: 500;">View details →</a></div>`;
-
     // Add click listener
-    marker.addListener('click', () => {
-      if (infoWindowRef.current) {
-        infoWindowRef.current.setContent(infoContent);
-        infoWindowRef.current.open(map, marker);
+    content.addEventListener('click', () => {
+      if (onMarkerClick) {
+        onMarkerClick(markerData.id);
       }
     });
-  }, []);
+  }, [onMarkerClick]);
 
   // Function to update user marker
-  const updateUserMarker = useCallback((map: google.maps.Map | null) => {
+  const updateUserMarker = useCallback(async (map: google.maps.Map | null) => {
     if (!map) return;
     
-    // Clear existing user marker
-    if (userMarkerRef.current) {
-      userMarkerRef.current.setMap(null);
-    }
+    userMarkerRef.current?.map && (userMarkerRef.current.map = null);
     userMarkerRef.current = null;
 
-    if (userPosition) {
-      userMarkerRef.current = new google.maps.Marker({
-        position: userPosition,
+    if (userPosition && google.maps.marker?.AdvancedMarkerElement) {
+      const userContent = document.createElement('div');
+      userContent.innerHTML = `
+        <div style="
+          width: 16px;
+          height: 16px;
+          background: #4285F4;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        "></div>
+      `;
+
+      userMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
         map,
-        title: 'Your Location',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#4285F4',
-          fillOpacity: 1,
-          strokeColor: 'white',
-          strokeWeight: 2,
-        },
+        position: userPosition,
+        content: userContent,
         zIndex: 1000,
       });
     }
   }, [userPosition]);
 
   // Function to update selected location marker and radius circle
-  const updateSelectedLocation = useCallback((map: google.maps.Map | null) => {
+  const updateSelectedLocation = useCallback(async (map: google.maps.Map | null) => {
     if (!map) return;
     
     // Clear existing selected location marker
-    if (selectedLocationMarkerRef.current) {
-      selectedLocationMarkerRef.current.setMap(null);
+    if (selectedLocationMarkerRef.current?.map) {
+      selectedLocationMarkerRef.current.map = null;
     }
     selectedLocationMarkerRef.current = null;
     
@@ -395,21 +360,39 @@ export default function EnhancedGoogleMap({
     }
     radiusCircleRef.current = null;
 
-    if (selectedLocation) {
+    if (selectedLocation && google.maps.marker?.AdvancedMarkerElement) {
       // Create selected location marker
-      selectedLocationMarkerRef.current = new google.maps.Marker({
-        position: selectedLocation,
+      const selectedContent = document.createElement('div');
+      selectedContent.innerHTML = `
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #ef4444;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          position: relative;
+        ">
+          <div style="
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            font-weight: 500;
+          ">Selected Location</div>
+        </div>
+      `;
+
+      selectedLocationMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
         map,
-        title: 'Selected Location',
-        icon: {
-          path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-          scale: 8,
-          fillColor: '#ef4444',
-          fillOpacity: 1,
-          strokeColor: 'white',
-          strokeWeight: 2,
-          rotation: 180,
-        },
+        position: selectedLocation,
+        content: selectedContent,
         zIndex: 999,
       });
 
@@ -437,7 +420,8 @@ export default function EnhancedGoogleMap({
       const loader = new Loader({
         apiKey,
         version: 'weekly',
-        libraries: ['places'], // Removed 'marker' since we're not using AdvancedMarkerElement
+        libraries: ['places', 'marker'],
+        mapIds: ['DEMO_MAP_ID'] // Required for AdvancedMarkerElement
       });
 
       await loader.load();
@@ -447,11 +431,10 @@ export default function EnhancedGoogleMap({
       const map = new google.maps.Map(mapRef.current, {
         center,
         zoom,
-        // mapId: 'DEMO_MAP_ID', // Commented out to avoid style conflicts
+        mapId: 'DEMO_MAP_ID',
         mapTypeControl: true,
         streetViewControl: true,
         fullscreenControl: true,
-        clickableIcons: false, // Disable default POI clicks
       });
       mapInstanceRef.current = map;
       
@@ -480,15 +463,11 @@ export default function EnhancedGoogleMap({
 
       // Add click listener for location selection
       if (onClick) {
-        console.log('Adding click listener to map');
         map.addListener('click', (e: google.maps.MapMouseEvent) => {
-          console.log('Map clicked event fired', e.latLng);
           if (e.latLng) {
             onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
           }
         });
-      } else {
-        console.log('No onClick handler provided to map');
       }
 
       // Add markers
@@ -509,7 +488,7 @@ export default function EnhancedGoogleMap({
     
     // Clear existing markers
     Object.values(markerRefs.current).forEach(marker => {
-      marker.setMap(null);
+      if (marker.map) marker.map = null;
     });
     markerRefs.current = {};
 
@@ -546,24 +525,14 @@ export default function EnhancedGoogleMap({
       }
       
       Object.values(markerRefs.current).forEach(marker => {
-        marker.setMap(null);
+        if (marker.map) marker.map = null;
       });
       markerRefs.current = {};
       
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setMap(null);
-        userMarkerRef.current = null;
+      if (userMarkerRef.current?.map) {
+        userMarkerRef.current.map = null;
       }
-      
-      if (selectedLocationMarkerRef.current) {
-        selectedLocationMarkerRef.current.setMap(null);
-        selectedLocationMarkerRef.current = null;
-      }
-      
-      if (radiusCircleRef.current) {
-        radiusCircleRef.current.setMap(null);
-        radiusCircleRef.current = null;
-      }
+      userMarkerRef.current = null;
       
       infoWindowRef.current?.close();
     };
