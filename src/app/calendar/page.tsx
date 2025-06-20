@@ -276,6 +276,10 @@ function CalendarContent() {
     setFilters(prev => ({ ...prev, city: selectedOption }));
   };
 
+  const handleDayClick = (dateStr: string) => {
+    router.push(`/date-search?date=${dateStr}`);
+  };
+
   return (
     <>
       <main className="container-wide py-6 sm:py-8">
@@ -380,7 +384,7 @@ function CalendarContent() {
                 <div className="space-y-3">
                   {calendarCells.filter(cell => !cell.weekNumber).map((cell) => {
                     const dateStr = formatDateString(cell.date);
-                    const dayExhibitions = getExhibitionsForDate(exhibitions, cell.date);
+                    const dayExhibitions = getExhibitionsForDate(cell.date);
                     if (!cell.isCurrentMonth || dayExhibitions.length === 0) return null;
                     
                     return (
@@ -418,7 +422,7 @@ function CalendarContent() {
                     );
                   })}
                 </div>
-                {calendarCells.filter(cell => !cell.weekNumber && cell.isCurrentMonth && getExhibitionsForDate(exhibitions, cell.date).length > 0).length === 0 && (
+                {calendarCells.filter(cell => !cell.weekNumber && cell.isCurrentMonth && getExhibitionsForDate(cell.date).length > 0).length === 0 && (
                   <div className="text-center py-8 text-[var(--text-muted)]">
                     No exhibitions this month
                   </div>

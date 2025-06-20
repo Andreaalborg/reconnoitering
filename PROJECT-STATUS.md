@@ -17,6 +17,9 @@
   - `/quick-verify` - Quick email verification
   - `/dev/make-admin` - Make user admin
   - `/api/dev/reset-admin` - Reset admin password
+- ✅ Fixed missing formatDateString function in calendar page
+- ✅ Fixed getExhibitionsForDate function calls (removed extra argument)
+- ✅ Added missing handleDayClick function for mobile calendar navigation
 
 ## 🎯 What's Working
 
