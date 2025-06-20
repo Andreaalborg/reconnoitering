@@ -1,10 +1,22 @@
 # 📊 Project Status - Reconnoitering
-**Last Updated:** 2025-06-19
+**Last Updated:** 2025-06-20
 
 ## 🚀 Current Deployment Status
 - **Production URL:** Deployed on Netlify (tidligere Vercel)
 - **Status:** ✅ Live and functional
 - **Known Issues:** Email verification only works in development (logs to console)
+
+## 🆕 Recent Changes (2025-06-20)
+- ✅ Fixed Sentry configuration issues (temporarily disabled in next.config.mjs)
+- ✅ Created instrumentation.ts for proper Sentry setup
+- ✅ Added loading skeletons for exhibitions and home page
+- ✅ Created SEO files: robots.txt and sitemap.xml
+- ✅ Added PWA manifest (site.webmanifest)
+- ✅ Fixed import errors in dev endpoints (connectDB → dbConnect)
+- ✅ Created dev tools for easier testing:
+  - `/quick-verify` - Quick email verification
+  - `/dev/make-admin` - Make user admin
+  - `/api/dev/reset-admin` - Reset admin password
 
 ## 🎯 What's Working
 
@@ -112,9 +124,11 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-api-key
 - [x] Improve home page hero section - (ferdig)
 - [x] Add proper meta tags for SEO - (ferdig)
 - [x] Create sitemap.xml - (ferdig)
+- [x] Add loading skeletons for better UX - (ferdig)
+- [x] Create robots.txt for SEO - (ferdig)
+- [x] Add PWA manifest file - (ferdig)
 
 ### 📋 Pending Tasks
-- [ ] Add loading skeletons for better UX
 - [ ] Optimize bundle size and performance
 - [ ] Set up email service (GoHighLevel API integration) - waiting for client credentials
 - [ ] Remove all development-only endpoints before production
