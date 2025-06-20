@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       }, {});
       
       // Add exhibitions to venues
-      venuesWithDetails = venues.map(venue => ({
+      venuesWithDetails = venues.map((venue: any) => ({
         ...venue,
         currentExhibitions: exhibitionsByVenue[venue._id.toString()] || [],
         exhibitionCount: (exhibitionsByVenue[venue._id.toString()] || []).length
