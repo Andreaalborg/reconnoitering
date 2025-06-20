@@ -1,7 +1,7 @@
 // src/app/map/page.tsx
 'use client';
 export const dynamic = 'force-dynamic';
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import EnhancedGoogleMap from '@/components/EnhancedGoogleMap';
 
@@ -47,6 +47,12 @@ function MapPageContent() {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchRadius, setSearchRadius] = useState(5); // Default 5km radius
   const [showRadiusFilter, setShowRadiusFilter] = useState(false);
+  
+  // Use ref to track selecting location state for map click handler
+  const isSelectingLocationRef = useRef(false);
+  useEffect(() => {
+    isSelectingLocationRef.current = isSelectingLocation;
+  }, [isSelectingLocation]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -155,12 +161,13 @@ function MapPageContent() {
   
   // Handle map click for location selection
   const handleMapClick = useCallback((location: { lat: number; lng: number }) => {
-    if (isSelectingLocation) {
+    console.log('Map clicked:', location, 'isSelectingLocation:', isSelectingLocationRef.current);
+    if (isSelectingLocationRef.current) {
       setSelectedLocation(location);
       setIsSelectingLocation(false);
       setShowRadiusFilter(true);
     }
-  }, [isSelectingLocation]);
+  }, []);
 
   const mapMarkers = filteredVenues.map(venue => ({
     id: venue._id,
