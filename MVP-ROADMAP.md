@@ -1,11 +1,36 @@
 # 🚀 MVP Roadmap - Reconnoitering
 
-**Last Updated:** 2025-06-19
+**Last Updated:** 2025-06-20
 
 ## 🎯 Current Status
 The application is functional but needs critical fixes before production deployment.
 
 ## 🔴 MVP Critical (Must Have Before Launch)
+
+### 0. Customer Feedback Implementation (NEW - 2025-06-20)
+**Priority:** CRITICAL
+**Customer Requirements:**
+
+#### A. Interactive Map Enhancement (Booking.com Style)
+- Show ALL venue pins on map by default
+- Implement hover tooltips with:
+  - Quick preview of exhibitions
+  - Opening hours
+  - Basic venue information
+- Similar to booking.com's hotel map view
+
+#### B. Enhanced Location Features
+- Keep existing "Nearby me" geolocation feature
+- Add vacation planning mode:
+  - User can select any location worldwide
+  - Set custom radius around selected point
+  - Example: "I'm planning a Paris trip, show venues within 5km of Eiffel Tower"
+
+#### C. Venue Closure Visibility
+- Display closure information prominently
+- Show "Closed on Mondays" etc. in exhibition previews
+- Use visual indicators (red text, smaller font)
+- Make it immediately obvious when venues are closed
 
 ### 1. Email Service Integration
 **Priority:** CRITICAL

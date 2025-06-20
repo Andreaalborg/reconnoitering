@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import GoogleMap from '@/components/GoogleMap';
+import EnhancedGoogleMap from '@/components/EnhancedGoogleMap';
 
 // Updated interface for Venue data for map markers
 interface MapVenue {
@@ -15,6 +15,17 @@ interface MapVenue {
     lat: number;
     lng: number;
   };
+  address?: string;
+  websiteUrl?: string;
+  defaultClosedDays?: string[];
+  currentExhibitions?: Array<{
+    _id: string;
+    title: string;
+    startDate: string;
+    endDate: string;
+    imageUrl?: string;
+  }>;
+  exhibitionCount?: number;
 }
 
 function MapPageContent() {
@@ -59,7 +70,7 @@ function MapPageContent() {
     setError(null);
     try {
       console.log("Fetching venues for map from /api/venues...");
-      const response = await fetch(`/api/venues`);
+      const response = await fetch(`/api/venues?includeDetails=true`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -97,12 +108,22 @@ function MapPageContent() {
   
   const handleMapDragEnd = useCallback((center: { lat: number; lng: number }) => {
   }, []);
+  
+  const handleMarkerClick = useCallback((venueId: string) => {
+    router.push(`/venues/${venueId}`);
+  }, [router]);
 
   const mapMarkers = venues.map(venue => ({
     id: venue._id,
     position: venue.coordinates,
     title: venue.name,
-    info: `${venue.city}, ${venue.country}`,
+    address: venue.address,
+    city: venue.city,
+    country: venue.country,
+    websiteUrl: venue.websiteUrl,
+    defaultClosedDays: venue.defaultClosedDays,
+    currentExhibitions: venue.currentExhibitions,
+    exhibitionCount: venue.exhibitionCount,
   }));
   
   if (!initialCenterSet || !mapCenter) { 
@@ -130,7 +151,7 @@ function MapPageContent() {
           ) : (
             <div className="relative">
               <div className="h-[calc(100vh-200px)] sm:h-[500px] md:h-[600px] lg:h-[700px]">
-                <GoogleMap
+                <EnhancedGoogleMap
                   apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
                   center={mapCenter}
                   zoom={12}
@@ -138,6 +159,7 @@ function MapPageContent() {
                   userPosition={userPosition}
                   showSearchBox={true}
                   onPlaceSelected={handlePlaceSelected}
+                  onMarkerClick={handleMarkerClick}
                   height="100%"
                 />
               </div>

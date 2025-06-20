@@ -134,6 +134,23 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-api-key
 - [x] Add PWA manifest file - (ferdig)
 
 ### 📋 Pending Tasks
+
+#### 🆕 Customer Feedback (2025-06-20)
+- [ ] Update interactive map to be more like booking.com:
+  - Show pins for ALL venues (not just on search/filter)
+  - Add hover functionality with quick view info
+  - Display exhibitions, opening hours, etc. in hover tooltip
+- [ ] Enhance "Nearby me" feature:
+  - Keep current geolocation functionality
+  - Add option to choose any location worldwide
+  - Allow setting custom radius for vacation planning
+  - Example: Planning Paris trip, see venues around chosen Paris location
+- [ ] Improve venue closing time visibility:
+  - Show "Closed on Mondays" etc. when previewing exhibitions
+  - Use small text or red color for emphasis
+  - Make closure information more prominent
+
+#### Previous Tasks
 - [ ] Optimize bundle size and performance
 - [ ] Set up email service (GoHighLevel API integration) - waiting for client credentials
 - [ ] Remove all development-only endpoints before production

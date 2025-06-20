@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Venue from '@/models/Venue';
+import Exhibition from '@/models/Exhibition';
 
 // GET: List all active venues (public route)
 export async function GET(request: NextRequest) {
@@ -8,6 +9,9 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     
     const { searchParams } = new URL(request.url);
+    
+    // Check if we want detailed info (for map view)
+    const includeDetails = searchParams.get('includeDetails') === 'true';
     
     // Base query - only active venues for public API
     const query: any = { isActive: true, 'coordinates.lat': { $ne: null }, 'coordinates.lng': { $ne: null } };
@@ -65,13 +69,49 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '200'); // Higher default limit for venues
     const skip = parseInt(searchParams.get('skip') || '0');
     
+    // Select fields based on detail level
+    const selectFields = includeDetails 
+      ? '_id name city country coordinates address websiteUrl defaultClosedDays'
+      : '_id name city country coordinates';
+    
     // Fetch venues
     const venues = await Venue.find(query)
-      .select('_id name city country coordinates')
+      .select(selectFields)
       .sort(sortOption)
       .limit(limit)
       .skip(skip)
       .lean();
+      
+    // If includeDetails is true, fetch current exhibitions for each venue
+    let venuesWithDetails = venues;
+    if (includeDetails) {
+      const today = new Date();
+      const venueIds = venues.map(v => v._id);
+      
+      // Fetch current exhibitions for all venues
+      const exhibitions = await Exhibition.find({
+        venue: { $in: venueIds },
+        startDate: { $lte: today },
+        endDate: { $gte: today }
+      })
+      .select('title venue startDate endDate imageUrl')
+      .lean();
+      
+      // Group exhibitions by venue
+      const exhibitionsByVenue = exhibitions.reduce((acc: any, exhibition) => {
+        const venueId = exhibition.venue.toString();
+        if (!acc[venueId]) acc[venueId] = [];
+        acc[venueId].push(exhibition);
+        return acc;
+      }, {});
+      
+      // Add exhibitions to venues
+      venuesWithDetails = venues.map(venue => ({
+        ...venue,
+        currentExhibitions: exhibitionsByVenue[venue._id.toString()] || [],
+        exhibitionCount: (exhibitionsByVenue[venue._id.toString()] || []).length
+      }));
+    }
       
     const total = await Venue.countDocuments(query);
     
@@ -81,7 +121,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ 
       success: true, 
-      data: venues,
+      data: venuesWithDetails,
       meta: {
         total,
         filter_options: {
