@@ -78,8 +78,8 @@ export default function VenuesPage() {
         setFilteredVenues(data.data || []);
         
         // Extract unique countries and cities
-        const uniqueCountries = [...new Set(data.data.map((v: Venue) => v.country))].sort();
-        const uniqueCities = [...new Set(data.data.map((v: Venue) => v.city))].sort();
+        const uniqueCountries = [...new Set(data.data.map((v: Venue) => v.country))].sort() as string[];
+        const uniqueCities = [...new Set(data.data.map((v: Venue) => v.city))].sort() as string[];
         
         setCountries(uniqueCountries);
         setCities(uniqueCities);
