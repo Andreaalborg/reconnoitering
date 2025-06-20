@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/options';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { validatePassword } from '@/utils/passwordValidation';
 
 export async function PUT(request: Request) {

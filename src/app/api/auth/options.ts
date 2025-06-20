@@ -2,7 +2,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { NextAuthOptions } from 'next-auth';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Validate that NEXTAUTH_SECRET is set
 if (!process.env.NEXTAUTH_SECRET) {
