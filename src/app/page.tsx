@@ -149,17 +149,15 @@ function HomeContent() {
       <section className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white/90 z-10"></div>
         
-        {/* Background image from featured exhibition */}
-        {(popularExhibitions[0]?.coverImage || popularExhibitions[0]?.imageUrl) && (
-          <div className="absolute inset-0">
-            <img 
-              src={popularExhibitions[0].coverImage || popularExhibitions[0].imageUrl} 
-              alt=""
-              className="w-full h-full object-cover"
-              loading="eager"
-            />
-          </div>
-        )}
+        {/* Background image - Munch Museum artwork */}
+        <div className="absolute inset-0">
+          <img 
+            src="https://www.munchmuseet.no/globalassets/foto-utstillinger/2025/livsblod/mm.g.00203-05.jpg?w=1920&h=900&mode=Crop&quality=80&crop=0,448,2917,1815" 
+            alt="Artwork from Munch Museum"
+            className="w-full h-full object-cover"
+            loading="eager"
+          />
+        </div>
         
         <div className="relative z-20 text-center container-narrow py-20">
           <h1 className="display-text mb-4 sm:mb-6 animate-fade-in text-white mix-blend-difference">

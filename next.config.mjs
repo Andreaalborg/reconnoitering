@@ -13,7 +13,8 @@ const nextConfig = {
       'artsandculture.google.com',
       'images.unsplash.com',
       'source.unsplash.com',
-      'upload.wikimedia.org'
+      'upload.wikimedia.org',
+      'www.munchmuseet.no'
     ],
     remotePatterns: [
       {
