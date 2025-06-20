@@ -35,11 +35,18 @@ function MapPageContent() {
   const DEFAULT_CENTER = { lat: 59.9139, lng: 10.7522 };
   
   const [venues, setVenues] = useState<MapVenue[]>([]);
+  const [filteredVenues, setFilteredVenues] = useState<MapVenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [initialCenterSet, setInitialCenterSet] = useState(false);
+  
+  // Location selection mode
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [searchRadius, setSearchRadius] = useState(5); // Default 5km radius
+  const [showRadiusFilter, setShowRadiusFilter] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -112,8 +119,50 @@ function MapPageContent() {
   const handleMarkerClick = useCallback((venueId: string) => {
     router.push(`/venues/${venueId}`);
   }, [router]);
+  
+  // Haversine formula to calculate distance between two points
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+  
+  // Filter venues based on radius
+  useEffect(() => {
+    if (!showRadiusFilter || !selectedLocation) {
+      setFilteredVenues(venues);
+      return;
+    }
+    
+    const filtered = venues.filter(venue => {
+      const distance = calculateDistance(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        venue.coordinates.lat,
+        venue.coordinates.lng
+      );
+      return distance <= searchRadius;
+    });
+    
+    setFilteredVenues(filtered);
+  }, [venues, selectedLocation, searchRadius, showRadiusFilter]);
+  
+  // Handle map click for location selection
+  const handleMapClick = useCallback((location: { lat: number; lng: number }) => {
+    if (isSelectingLocation) {
+      setSelectedLocation(location);
+      setIsSelectingLocation(false);
+      setShowRadiusFilter(true);
+    }
+  }, [isSelectingLocation]);
 
-  const mapMarkers = venues.map(venue => ({
+  const mapMarkers = filteredVenues.map(venue => ({
     id: venue._id,
     position: venue.coordinates,
     title: venue.name,
@@ -137,8 +186,79 @@ function MapPageContent() {
   return (
     <>
       <main className="container-wide py-6 sm:py-8">
-        <div className="flex justify-between items-center mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl font-serif text-[var(--primary)]">Venue Map</h1>
+        <div className="flex flex-col gap-4 mb-4 sm:mb-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl sm:text-3xl font-serif text-[var(--primary)]">Venue Map</h1>
+          </div>
+          
+          {/* Location Selection Controls */}
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowRadiusFilter(false);
+                  setSelectedLocation(null);
+                  setFilteredVenues(venues);
+                }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  !showRadiusFilter 
+                    ? 'bg-rose-500 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Venues
+              </button>
+              <button
+                onClick={() => {
+                  if (userPosition) {
+                    setSelectedLocation(userPosition);
+                    setShowRadiusFilter(true);
+                  }
+                }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  showRadiusFilter && selectedLocation?.lat === userPosition?.lat
+                    ? 'bg-rose-500 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                disabled={!userPosition}
+              >
+                Near Me
+              </button>
+              <button
+                onClick={() => setIsSelectingLocation(true)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isSelectingLocation
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {isSelectingLocation ? 'Click on map to select location' : 'Choose Location'}
+              </button>
+            </div>
+            
+            {/* Radius Slider */}
+            {showRadiusFilter && (
+              <div className="flex items-center gap-3 bg-white rounded-lg px-4 py-2 shadow-sm">
+                <span className="text-sm font-medium text-gray-700">Radius:</span>
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                  className="w-32"
+                />
+                <span className="text-sm font-medium text-gray-900 min-w-[3rem]">{searchRadius} km</span>
+              </div>
+            )}
+            
+            {/* Results count */}
+            {showRadiusFilter && (
+              <div className="text-sm text-gray-600">
+                Found {filteredVenues.length} venue{filteredVenues.length !== 1 ? 's' : ''} within radius
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="card-minimal overflow-hidden">
@@ -157,9 +277,13 @@ function MapPageContent() {
                   zoom={12}
                   markers={mapMarkers}
                   userPosition={userPosition}
+                  selectedLocation={selectedLocation}
+                  showRadius={showRadiusFilter}
+                  radiusKm={searchRadius}
                   showSearchBox={true}
                   onPlaceSelected={handlePlaceSelected}
                   onMarkerClick={handleMarkerClick}
+                  onClick={handleMapClick}
                   height="100%"
                 />
               </div>

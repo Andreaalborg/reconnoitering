@@ -31,10 +31,14 @@ interface EnhancedGoogleMapProps {
   zoom?: number;
   markers?: EnhancedMapMarker[];
   userPosition?: { lat: number; lng: number };
+  selectedLocation?: { lat: number; lng: number };
+  showRadius?: boolean;
+  radiusKm?: number;
   height?: string;
   showSearchBox?: boolean;
   onPlaceSelected?: (place: google.maps.places.PlaceResult) => void;
   onMarkerClick?: (markerId: string) => void;
+  onClick?: (location: { lat: number; lng: number }) => void;
 }
 
 export default function EnhancedGoogleMap({ 
@@ -43,16 +47,22 @@ export default function EnhancedGoogleMap({
   zoom = 13,
   markers = [],
   userPosition,
+  selectedLocation,
+  showRadius = false,
+  radiusKm = 5,
   height = '500px',
   showSearchBox = false,
   onPlaceSelected,
   onMarkerClick,
+  onClick,
 }: EnhancedGoogleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const markerRefs = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
   const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const selectedLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
@@ -334,6 +344,74 @@ export default function EnhancedGoogleMap({
     }
   }, [userPosition]);
 
+  // Function to update selected location marker and radius circle
+  const updateSelectedLocation = useCallback(async (map: google.maps.Map | null) => {
+    if (!map) return;
+    
+    // Clear existing selected location marker
+    if (selectedLocationMarkerRef.current?.map) {
+      selectedLocationMarkerRef.current.map = null;
+    }
+    selectedLocationMarkerRef.current = null;
+    
+    // Clear existing radius circle
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.setMap(null);
+    }
+    radiusCircleRef.current = null;
+
+    if (selectedLocation && google.maps.marker?.AdvancedMarkerElement) {
+      // Create selected location marker
+      const selectedContent = document.createElement('div');
+      selectedContent.innerHTML = `
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #ef4444;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          position: relative;
+        ">
+          <div style="
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            font-weight: 500;
+          ">Selected Location</div>
+        </div>
+      `;
+
+      selectedLocationMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: selectedLocation,
+        content: selectedContent,
+        zIndex: 999,
+      });
+
+      // Draw radius circle if enabled
+      if (showRadius) {
+        radiusCircleRef.current = new google.maps.Circle({
+          map,
+          center: selectedLocation,
+          radius: radiusKm * 1000, // Convert km to meters
+          fillColor: '#ef4444',
+          fillOpacity: 0.1,
+          strokeColor: '#ef4444',
+          strokeOpacity: 0.4,
+          strokeWeight: 2,
+        });
+      }
+    }
+  }, [selectedLocation, showRadius, radiusKm]);
+
   // Initialize map
   const initializeMap = useCallback(async () => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -383,16 +461,26 @@ export default function EnhancedGoogleMap({
         });
       }
 
+      // Add click listener for location selection
+      if (onClick) {
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (e.latLng) {
+            onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          }
+        });
+      }
+
       // Add markers
       for (const marker of markers) {
         await addEnhancedMarker(marker, map);
       }
       await updateUserMarker(map);
+      await updateSelectedLocation(map);
 
     } catch (error) {
       console.error('Error initializing map:', error);
     }
-  }, [apiKey, center, zoom, showSearchBox, onPlaceSelected, markers, addEnhancedMarker, updateUserMarker]);
+  }, [apiKey, center, zoom, showSearchBox, onPlaceSelected, markers, addEnhancedMarker, updateUserMarker, updateSelectedLocation, onClick]);
 
   // Update markers when data changes
   useEffect(() => {
@@ -415,6 +503,12 @@ export default function EnhancedGoogleMap({
     if (!mapInstanceRef.current) return;
     updateUserMarker(mapInstanceRef.current);
   }, [userPosition, updateUserMarker]);
+
+  // Update selected location marker and radius
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    updateSelectedLocation(mapInstanceRef.current);
+  }, [selectedLocation, showRadius, radiusKm, updateSelectedLocation]);
 
   // Initialize map on mount
   useEffect(() => {
