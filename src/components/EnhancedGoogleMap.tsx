@@ -31,7 +31,7 @@ interface EnhancedGoogleMapProps {
   zoom?: number;
   markers?: EnhancedMapMarker[];
   userPosition?: { lat: number; lng: number };
-  selectedLocation?: { lat: number; lng: number };
+  selectedLocation?: { lat: number; lng: number } | null;
   showRadius?: boolean;
   radiusKm?: number;
   height?: string;
