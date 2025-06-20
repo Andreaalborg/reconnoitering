@@ -37,7 +37,7 @@ export default async function VenuePage({ params }: VenuePageProps) {
   await dbConnect();
   
   try {
-    const venue = await Venue.findById(params.id).lean();
+    const venue: any = await Venue.findById(params.id).lean();
     
     if (!venue || !venue.isActive) {
       notFound();
