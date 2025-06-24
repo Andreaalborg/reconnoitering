@@ -20,7 +20,11 @@
       "Bash(cp:*)",
       "Bash(npm cache clean:*)",
       "Bash(node:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(nvm:*)",
+      "Bash(source:*)",
+      "Bash(bash -c \"source ~/.nvm/nvm.sh && nvm use 18.17.0 && npm run lint 2>&1 | head -20\")",
+      "Bash(bash:*)"
     ],
     "deny": []
   }

@@ -13,6 +13,7 @@ interface ExhibitionCardProps {
       name: string;
       city: string;
       country: string;
+      defaultClosedDays?: string[];
     };
     location?: {
       name?: string;
@@ -33,6 +34,7 @@ interface ExhibitionCardProps {
     name: string;
     city: string;
     country: string;
+    defaultClosedDays?: string[];
   };
   location?: {
     name?: string;
@@ -65,6 +67,21 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
   };
 
   const minimal = props.minimal;
+  
+  // Format closed days for display
+  const formatClosedDays = (closedDays?: string[]) => {
+    if (!closedDays || closedDays.length === 0) return null;
+    
+    if (closedDays.length === 1) {
+      return `Closed on ${closedDays[0]}s`;
+    } else if (closedDays.length === 2) {
+      return `Closed on ${closedDays[0]}s and ${closedDays[1]}s`;
+    } else {
+      const lastDay = closedDays[closedDays.length - 1];
+      const otherDays = closedDays.slice(0, -1).join('s, ');
+      return `Closed on ${otherDays}s and ${lastDay}s`;
+    }
+  };
   
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -159,6 +176,12 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
                 <Calendar className="w-4 h-4" />
                 <span>{formatDate(exhibition.startDate)} – {formatDate(exhibition.endDate)}</span>
               </div>
+              
+              {exhibition.venue?.defaultClosedDays && exhibition.venue.defaultClosedDays.length > 0 && (
+                <div className="text-xs text-[var(--secondary)] mt-1">
+                  {formatClosedDays(exhibition.venue.defaultClosedDays)}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -215,6 +238,12 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
               <Calendar className="w-4 h-4" />
               <span>{formatDate(exhibition.startDate)} – {formatDate(exhibition.endDate)}</span>
             </div>
+            
+            {exhibition.venue?.defaultClosedDays && exhibition.venue.defaultClosedDays.length > 0 && (
+              <div className="text-xs text-[var(--secondary)] mt-1">
+                {formatClosedDays(exhibition.venue.defaultClosedDays)}
+              </div>
+            )}
           </div>
           
           {exhibition.tags && exhibition.tags.length > 0 && (

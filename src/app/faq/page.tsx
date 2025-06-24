@@ -256,7 +256,7 @@ export default function FAQPage() {
         <div className="container-narrow text-center">
           <h2 className="text-3xl font-serif mb-4">Still Have Questions?</h2>
           <p className="text-[var(--text-muted)] mb-8 max-w-2xl mx-auto">
-            Can't find what you're looking for? Our support team is here to help.
+            Can&apos;t find what you&apos;re looking for? Our support team is here to help.
           </p>
           <a href="/contact" className="btn-primary">
             Contact Support

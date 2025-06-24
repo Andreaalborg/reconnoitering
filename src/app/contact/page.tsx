@@ -42,7 +42,7 @@ export default function ContactPage() {
             </div>
             <h1 className="text-4xl font-serif mb-4">Thank You!</h1>
             <p className="text-[var(--text-muted)]">
-              We've received your message and will get back to you within 24-48 hours.
+              We&apos;ve received your message and will get back to you within 24-48 hours.
             </p>
           </div>
           <button 
@@ -68,7 +68,7 @@ export default function ContactPage() {
           <div className="accent-line mx-auto mb-6"></div>
           <p className="text-lg text-[var(--text-muted)] max-w-2xl mx-auto">
             Have questions about exhibitions, partnerships, or just want to say hello? 
-            We'd love to hear from you.
+            We&apos;d love to hear from you.
           </p>
         </div>
       </section>
@@ -240,7 +240,7 @@ export default function ContactPage() {
               <h3 className="font-medium text-lg mb-2">How can I list my exhibition on Reconnoitering?</h3>
               <p className="text-[var(--text-muted)]">
                 Museums and galleries can contact us through the partnership inquiry form. 
-                We'll review your submission and get back to you with next steps.
+                We&apos;ll review your submission and get back to you with next steps.
               </p>
             </div>
 

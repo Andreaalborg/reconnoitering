@@ -24,7 +24,7 @@ export async function GET(
     const exhibition = await Exhibition.findById(id)
       .populate<{ venue: typeof Venue }>({
         path: 'venue', 
-        select: 'name city country address websiteUrl coordinates'
+        select: 'name city country address websiteUrl coordinates defaultClosedDays'
       })
       .lean();
     
@@ -65,7 +65,7 @@ export async function PUT(
       { new: true, runValidators: true }
     ).populate<{ venue: typeof Venue }>({
       path: 'venue',
-      select: 'name city country address websiteUrl coordinates'
+      select: 'name city country address websiteUrl coordinates defaultClosedDays'
     });
     
     if (!exhibition) {

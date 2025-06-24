@@ -27,6 +27,7 @@ interface Exhibition {
       lat: number;
       lng: number;
     };
+    defaultClosedDays?: string[];
   };
   location?: {
     city: string;
@@ -216,7 +217,8 @@ function ExhibitionDetailContent() {
   
   // Check if today is the weekly closing day
   const todayDayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-  const isClosedToday = exhibition?.closedDay === todayDayOfWeek;
+  const isClosedToday = exhibition?.venue?.defaultClosedDays?.includes(todayDayOfWeek) || 
+                       exhibition?.closedDay === todayDayOfWeek;
   
   // Sørg for at venue og location håndteres riktig for kartet
   const getMapCoordinates = () => {
@@ -266,7 +268,7 @@ function ExhibitionDetailContent() {
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Exhibition not found</h1>
-            <p className="mt-4 text-lg text-gray-600">The exhibition you're looking for does not exist or has been removed.</p>
+            <p className="mt-4 text-lg text-gray-600">The exhibition you&apos;re looking for does not exist or has been removed.</p>
             <Link href="/exhibitions" className="mt-8 inline-block bg-rose-500 text-white px-6 py-3 rounded-md">
               Browse all exhibitions
             </Link>
@@ -355,10 +357,17 @@ function ExhibitionDetailContent() {
                   {getLocationText()}
                 </p>
                 
-                {/* Display closed day if set */}
-                {exhibition.closedDay && (
+                {/* Display closed days from venue */}
+                {exhibition.venue?.defaultClosedDays && exhibition.venue.defaultClosedDays.length > 0 && (
                   <p className="mt-2 text-amber-600">
-                    <span className="font-medium">Closed on {exhibition.closedDay}s</span>
+                    <span className="font-medium">
+                      {exhibition.venue.defaultClosedDays.length === 1 
+                        ? `Closed on ${exhibition.venue.defaultClosedDays[0]}s`
+                        : exhibition.venue.defaultClosedDays.length === 2
+                        ? `Closed on ${exhibition.venue.defaultClosedDays[0]}s and ${exhibition.venue.defaultClosedDays[1]}s`
+                        : `Closed on ${exhibition.venue.defaultClosedDays.slice(0, -1).join('s, ')}s and ${exhibition.venue.defaultClosedDays[exhibition.venue.defaultClosedDays.length - 1]}s`
+                      }
+                    </span>
                   </p>
                 )}
               </div>
@@ -507,9 +516,16 @@ function ExhibitionDetailContent() {
                     <p className="text-gray-700 mb-2">
                       This exhibition is open from {startDate} to {endDate}.
                     </p>
-                    {exhibition.closedDay && (
+                    {exhibition.venue?.defaultClosedDays && exhibition.venue.defaultClosedDays.length > 0 && (
                       <p className="text-gray-700 mb-2">
-                        <span className="font-medium">Closed on {exhibition.closedDay}s</span>
+                        <span className="font-medium">
+                          {exhibition.venue.defaultClosedDays.length === 1 
+                            ? `Closed on ${exhibition.venue.defaultClosedDays[0]}s`
+                            : exhibition.venue.defaultClosedDays.length === 2
+                            ? `Closed on ${exhibition.venue.defaultClosedDays[0]}s and ${exhibition.venue.defaultClosedDays[1]}s`
+                            : `Closed on ${exhibition.venue.defaultClosedDays.slice(0, -1).join('s, ')}s and ${exhibition.venue.defaultClosedDays[exhibition.venue.defaultClosedDays.length - 1]}s`
+                          }
+                        </span>
                       </p>
                     )}
                     <p className="text-sm text-gray-600">

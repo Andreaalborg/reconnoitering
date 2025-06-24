@@ -14,9 +14,9 @@ Denne filen dokumenterer alle identifiserte feil i prosjektet og fremgangsmåten
 - TypeScript-kompilatoren rapporterer ingen feil (`npx tsc --noEmit` = success)
 - Alle type-relaterte problemer ser ut til å være løst
 
-### ESLint Status: ✅ VESENTLIG FORBEDRET!
-- **0 Errors** 🎉 (alle kritiske feil er fikset!)  
-- **13 Warnings** (advarsler som bør fikses)
+### ESLint Status: ✅ ALLE ERRORS FIKSET!
+- **0 Errors** 🎉 (alle 11 unescaped entities fikset!)
+- **17 Warnings** (useEffect dependencies - ikke kritisk)
 
 ### Runtime Status: ✅ NYLIG FORBEDRET!
 - **Nye runtime-feil oppdaget og fikset** 🔧
@@ -215,4 +215,74 @@ Oppdater denne filen med status for hver fikset fil.
 
 ---
 
-**Sist oppdatert:** ${new Date().toLocaleDateString('no-NO')} 
+## 🔄 Node.js Oppgradering (2025-06-24)
+
+### Problem
+- Next.js lint krever Node.js >= 18.17.0
+- Vi hadde Node.js 18.12.0
+- Noen dependencies krever >= 18.18.0
+
+### Løsning
+1. **Oppgradert til Node.js 18.18.0** (ikke 22 for kompatibilitet)
+2. **Installert via nvm i WSL**:
+   ```bash
+   nvm install 18.18.0
+   nvm use 18.18.0
+   nvm alias default 18.18.0
+   ```
+3. **Oppdatert .nvmrc** fil til 18.18.0
+4. **Reinstallert dependencies** med `npm install --legacy-peer-deps`
+
+### Resultat
+- ✅ Lint fungerer nå
+- ⚠️ 11 nye unescaped entities errors oppdaget
+- ⚠️ 17 useEffect warnings fortsatt tilstede
+
+### Viktig for fremtiden
+- Bruk WSL/Ubuntu terminal, IKKE Windows PowerShell
+- Kjør `source ~/.nvm/nvm.sh && nvm use 18.18.0` hvis Node resetter seg
+
+---
+
+## 🔧 Unescaped Entities Fix (2025-06-24)
+
+### Filer fikset (11 errors totalt):
+1. `src/app/admin/dashboard/page.tsx` - "Here's" → "Here&apos;s"
+2. `src/app/contact/page.tsx` - 3 steder: "We've", "We'd", "We'll"
+3. `src/app/exhibition/[id]/page.tsx` - "you're" → "you&apos;re"
+4. `src/app/faq/page.tsx` - "Can't" og "you're"
+5. `src/app/no-auth/page.tsx` - "don't" → "don&apos;t"
+6. `src/app/page.tsx` - 3 steder: "world's", "What's", "Beginner's"
+
+### Resultat:
+- ✅ 0 Errors i ESLint
+- Koden fungerer identisk som før
+- Bare HTML-encoding endret, ingen funksjonalitet påvirket
+
+---
+
+## 🎨 Venue Closed Days Feature (2025-06-24)
+
+### Implementert:
+1. **Exhibition Cards** (`src/components/ExhibitionCard.tsx`):
+   - Lagt til visning av venue closed days på exhibition cards
+   - Formatering: "Closed on Mondays", "Closed on Mondays and Tuesdays" etc.
+   - Vises i en liten tekst under datoene
+
+2. **Exhibition Detail Page** (`src/app/exhibition/[id]/page.tsx`):
+   - Oppdatert til å bruke venue defaultClosedDays
+   - Vises i venue info seksjonen (amber farge)
+   - Vises i "Plan your visit" seksjonen
+   - Sjekker om venue er stengt i dag
+
+3. **API Oppdatering** (`src/app/api/exhibitions/[id]/route.ts`):
+   - Inkluderer nå defaultClosedDays når venue populeres
+
+### Resultat:
+- ✅ Closed days vises nå på alle exhibition cards
+- ✅ Closed days vises tydeligere på exhibition detail sider
+- ✅ Konsistent formatering på tvers av appen
+
+---
+
+**Sist oppdatert:** 2025-06-24 

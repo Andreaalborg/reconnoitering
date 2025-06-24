@@ -167,7 +167,7 @@ function HomeContent() {
           </h1>
           <div className="accent-line mx-auto mb-6 sm:mb-8 animate-fade-in-delay bg-white"></div>
           <p className="text-base sm:text-lg text-white mix-blend-difference mb-8 sm:mb-12 max-w-2xl mx-auto animate-fade-in-delay-2 px-4">
-            Explore the world's most compelling art exhibitions, curated for the curious mind
+            Explore the world&apos;s most compelling art exhibitions, curated for the curious mind
           </p>
           
           {/* Search actions */}
@@ -205,7 +205,7 @@ function HomeContent() {
               <Calendar className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--secondary)] flex-shrink-0" />
               <div className="text-left">
                 <h3 className="font-semibold text-base sm:text-lg group-hover:underline">This Week</h3>
-                <p className="text-sm text-[var(--text-muted)]">What's on right now</p>
+                <p className="text-sm text-[var(--text-muted)]">What&apos;s on right now</p>
               </div>
             </Link>
             
@@ -367,7 +367,7 @@ function HomeContent() {
                 <div className="space-y-2">
                   <p className="text-sm text-[var(--text-muted)]">December 5, 2024</p>
                   <h3 className="text-xl font-serif group-hover:text-[var(--secondary)] transition-colors">
-                    A Beginner's Guide to Art Collecting
+                    A Beginner&apos;s Guide to Art Collecting
                   </h3>
                   <p className="text-[var(--text-muted)] line-clamp-3">
                     Essential tips and insights for those looking to start their own art collection, from galleries to auctions.
