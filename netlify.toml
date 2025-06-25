@@ -8,10 +8,5 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+# Security headers are now configured in next.config.mjs
+# to take advantage of Next.js built-in support and CSP configuration

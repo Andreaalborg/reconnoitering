@@ -1,6 +1,6 @@
-# Environment Variables for Vercel
+# Environment Variables for Netlify
 
-## Kopier disse til Vercel Dashboard → Settings → Environment Variables
+## Kopier disse til Netlify Dashboard → Site Settings → Environment Variables
 
 ### 1. MONGODB_URI
 ```
@@ -12,12 +12,12 @@ Environment: ✓ Production, ✓ Preview, ✓ Development
 ### 2. NEXTAUTH_URL
 ```
 Key: NEXTAUTH_URL
-Value: https://[DIN-VERCEL-URL].vercel.app
+Value: https://[DIN-NETLIFY-URL].netlify.app
 Environment: ✓ Production
 ```
-**VIKTIG**: Bytt ut [DIN-VERCEL-URL] med din faktiske Vercel URL!
-- For nytt prosjekt vil det være noe som: `reconnoitering.vercel.app`
-- IKKE bruk gamle URL fra reconnoitering-wvya
+**VIKTIG**: Bytt ut [DIN-NETLIFY-URL] med din faktiske Netlify URL!
+- For nytt prosjekt vil det være noe som: `reconnoitering.netlify.app`
+- IKKE inkluder trailing slash (/)
 
 ### 3. NEXTAUTH_SECRET
 ```
@@ -36,21 +36,22 @@ Environment: ✓ Production, ✓ Preview, ✓ Development
 
 ## Eksempel for nytt prosjekt
 
-Hvis din nye Vercel URL er `reconnoitering-new.vercel.app`:
+Hvis din nye Netlify URL er `reconnoitering.netlify.app`:
 
 ```
 MONGODB_URI=mongodb+srv://intsenai:20fNK8j2r8MQhHD3@cluster0.34dwe.mongodb.net/?retryWrites=true&w=majority
-NEXTAUTH_URL=https://reconnoitering-new.vercel.app
+NEXTAUTH_URL=https://reconnoitering.netlify.app
 NEXTAUTH_SECRET=THIS_IS_A_VERY_SECURE_SECRET_FOR_RECONNOITERING_APP
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=[din-nye-api-key-her]
 ```
 
 ## Viktige Noter
 
-1. **NEXTAUTH_URL** må matche eksakt med Vercel deployment URL
+1. **NEXTAUTH_URL** må matche eksakt med Netlify deployment URL
 2. **NEXT_PUBLIC_** prefix er påkrevd for client-side variabler
-3. MongoDB URI er allerede konfigurert med IP whitelist for Vercel
+3. MongoDB URI er allerede konfigurert med IP whitelist (0.0.0.0/0)
 4. Etter å legge til variables, må du redeploy
+5. For mer detaljert dokumentasjon, se `ENVIRONMENT-VARIABLES-PRODUCTION.md`
 
 ## Sjekkliste
 

@@ -285,4 +285,100 @@ Oppdater denne filen med status for hver fikset fil.
 
 ---
 
+## 🛡️ Rate Limiting Implementation (2025-06-24)
+
+### Implementert beskyttelse på:
+1. **User Registration** (`/api/user/register`)
+   - 5 forsøk per 15 minutter per IP
+   - Beskytter mot spam-registreringer
+
+2. **Login** (`/api/auth/[...nextauth]`)
+   - 5 forsøk per 15 minutter per IP
+   - Beskytter mot brute force angrep
+
+3. **Password Change** (`/api/user/password`)
+   - 5 forsøk per 15 minutter per bruker+IP
+   - Lagt til rate limiting (var ikke beskyttet før)
+
+### Tekniske detaljer:
+- In-memory storage (fungerer for single-instance)
+- Automatisk opprydding hvert minutt
+- Sentry logging for overvåking
+- HTTP 429 respons med Retry-After header
+
+### Dokumentasjon:
+- Fullstendig dokumentasjon i `RATE-LIMITING-DOCUMENTATION.md`
+- Inkluderer testing-instruksjoner og fremtidige forbedringer
+
+---
+
+## 📋 Environment Variables Audit (2025-06-24)
+
+### Dokumentasjon opprettet:
+1. **ENVIRONMENT-VARIABLES-PRODUCTION.md**
+   - Komplett guide for produksjonsmiljøvariabler
+   - Sikkerhetsnivå for hver variabel
+   - Feilsøkingsguide
+   - Best practices
+
+2. **DEPLOYMENT-CHECKLIST.md**
+   - Pre-deployment sjekkliste
+   - Step-by-step deployment guide
+   - Post-deployment verifisering
+   - Rollback plan
+
+3. **Oppdatert .env.example**
+   - Kategorisert variabler (Required/Optional/Dev)
+   - Lagt til hjelpsom kommentarer
+   - Inkludert generering-instruksjoner
+
+4. **Oppdatert ENVIRONMENT-VARIABLES-LIST.md**
+   - Endret fra Vercel til Netlify
+   - Oppdatert URLs og eksempler
+
+### Identifiserte variabler:
+- **Kritiske (4):** MONGODB_URI, NEXTAUTH_URL, NEXTAUTH_SECRET, NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+- **Valgfrie (6):** SENDGRID_API_KEY, NEXT_PUBLIC_SENTRY_DSN, Sentry build vars, etc.
+- **Ubrukte (4):** DATABASE_URL, NEXT_PUBLIC_MAPBOX_TOKEN, EMAIL_SERVER_*, NEXT_PUBLIC_BASE_URL
+
+### Sikkerhetsstatus:
+- ✅ Ingen hardkodede secrets funnet i koden
+- ✅ Alle sensitive variabler dokumentert som SECRET
+- ⚠️ MongoDB passord eksponert i dokumentasjon (bør roteres)
+- ⚠️ NEXTAUTH_SECRET i docs er placeholder (bra!)
+
+---
+
+## 🛡️ Security Headers Implementation (2025-06-24)
+
+### Implementert i next.config.mjs:
+1. **Basis Security Headers**
+   - X-Frame-Options: SAMEORIGIN (clickjacking beskyttelse)
+   - X-Content-Type-Options: nosniff (MIME sniffing beskyttelse)
+   - X-XSS-Protection: 1; mode=block (XSS beskyttelse)
+   - Referrer-Policy: strict-origin-when-cross-origin
+
+2. **Advanced Security Headers**
+   - Strict-Transport-Security (HSTS): 2 års HTTPS enforcement
+   - Permissions-Policy: Blokkerer kamera/mikrofon, tillater geolocation
+   - Content-Security-Policy (CSP): Omfattende ressurskontroll
+
+3. **CSP Konfigurering**
+   - Tillater Google Maps og Sentry
+   - Blokkerer farlige ressurser
+   - unsafe-inline for Next.js/Tailwind kompatibilitet
+
+### Dokumentasjon:
+- Fullstendig guide i `SECURITY-HEADERS-DOCUMENTATION.md`
+- Testing instruksjoner inkludert
+- Fremtidige forbedringer planlagt
+
+### Resultat:
+- ✅ Beskyttelse mot XSS, clickjacking, MIME sniffing
+- ✅ HTTPS enforcement med HSTS
+- ✅ Ressurskontroll med CSP
+- ⚠️ Trenger fintuning for produksjon (CORS, CSP strictness)
+
+---
+
 **Sist oppdatert:** 2025-06-24 

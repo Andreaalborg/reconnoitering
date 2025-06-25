@@ -178,7 +178,7 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
               </div>
               
               {exhibition.venue?.defaultClosedDays && exhibition.venue.defaultClosedDays.length > 0 && (
-                <div className="text-xs text-[var(--secondary)] mt-1">
+                <div className="text-xs text-red-600 font-medium mt-1">
                   {formatClosedDays(exhibition.venue.defaultClosedDays)}
                 </div>
               )}
@@ -240,7 +240,7 @@ const ExhibitionCard = (props: ExhibitionCardProps) => {
             </div>
             
             {exhibition.venue?.defaultClosedDays && exhibition.venue.defaultClosedDays.length > 0 && (
-              <div className="text-xs text-[var(--secondary)] mt-1">
+              <div className="text-xs text-red-600 font-medium mt-1">
                 {formatClosedDays(exhibition.venue.defaultClosedDays)}
               </div>
             )}
