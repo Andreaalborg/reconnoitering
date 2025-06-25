@@ -5,7 +5,7 @@
 ### 1. MONGODB_URI
 ```
 Key: MONGODB_URI
-Value: mongodb+srv://intsenai:20fNK8j2r8MQhHD3@cluster0.34dwe.mongodb.net/?retryWrites=true&w=majority
+Value: mongodb+srv://[USERNAME]:[PASSWORD]@[CLUSTER].mongodb.net/?retryWrites=true&w=majority
 Environment: ✓ Production, ✓ Preview, ✓ Development
 ```
 
@@ -39,7 +39,7 @@ Environment: ✓ Production, ✓ Preview, ✓ Development
 Hvis din nye Netlify URL er `reconnoitering.netlify.app`:
 
 ```
-MONGODB_URI=mongodb+srv://intsenai:20fNK8j2r8MQhHD3@cluster0.34dwe.mongodb.net/?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://[USERNAME]:[PASSWORD]@[CLUSTER].mongodb.net/?retryWrites=true&w=majority
 NEXTAUTH_URL=https://reconnoitering.netlify.app
 NEXTAUTH_SECRET=THIS_IS_A_VERY_SECURE_SECRET_FOR_RECONNOITERING_APP
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=[din-nye-api-key-her]

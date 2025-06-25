@@ -13,7 +13,7 @@ This document provides a complete guide for configuring environment variables fo
 ### 1. MONGODB_URI
 **Purpose:** Database connection string  
 **Security Level:** 🔴 SECRET - Never expose publicly  
-**Example:** `mongodb+srv://username:password@cluster.mongodb.net/reconnoitering?retryWrites=true&w=majority`  
+**Example:** `mongodb+srv://[USERNAME]:[PASSWORD]@[CLUSTER].mongodb.net/[DATABASE]?retryWrites=true&w=majority`  
 **Where to get:** MongoDB Atlas dashboard  
 **Notes:** 
 - IP whitelist must include `0.0.0.0/0` for Netlify
@@ -42,7 +42,7 @@ This document provides a complete guide for configuring environment variables fo
 ### 4. NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 **Purpose:** Google Maps integration for venue locations  
 **Security Level:** 🟡 PUBLIC - Visible in browser (domain restricted)  
-**Example:** `AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY`  
+**Example:** `AIzaSy[YOUR-API-KEY-HERE]`  
 **Where to get:** [Google Cloud Console](https://console.cloud.google.com/)  
 **Configuration:**
 1. Enable Maps JavaScript API

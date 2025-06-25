@@ -381,4 +381,27 @@ Oppdater denne filen med status for hver fikset fil.
 
 ---
 
+## 🚨 KRITISK SIKKERHETSINCIDENT (2025-06-24)
+
+### GitHub Secret Detection Alert:
+- MongoDB passord eksponert i ENVIRONMENT-VARIABLES-LIST.md
+- Google Maps API key eksempel så ekte ut
+
+### Umiddelbare tiltak:
+1. ✅ Fjernet alle ekte credentials fra dokumentasjon
+2. ✅ Erstattet med placeholders ([USERNAME], [PASSWORD], etc.)
+3. ✅ Opprettet SECURITY-INCIDENT-2025-06-24.md
+
+### KREVER HANDLING:
+1. 🔴 **ROTER MongoDB PASSORD UMIDDELBART**
+2. 🟡 Sjekk om Google API key var ekte
+3. ⚠️ Vurder å rense git history
+
+### Forebygging:
+- ALDRI bruk ekte credentials i dokumentasjon
+- Bruk åpenbart falske eksempler
+- Installer git-secrets for scanning
+
+---
+
 **Sist oppdatert:** 2025-06-24 
