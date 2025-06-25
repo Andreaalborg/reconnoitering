@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import SessionTimeout from "@/components/SessionTimeout";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -77,6 +78,7 @@ export default function RootLayout({
         <NextAuthProvider>
           <AnalyticsProvider>
             <ErrorBoundary>
+              <SessionTimeout timeoutInMinutes={30} warningInMinutes={5} />
               <div className="min-h-screen flex flex-col">
                 <Header />
                 <main className="flex-grow">
