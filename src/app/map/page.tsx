@@ -44,16 +44,9 @@ function MapPageContent() {
   const [initialCenterSet, setInitialCenterSet] = useState(false);
   
   // Location selection mode
-  const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchRadius, setSearchRadius] = useState(5); // Default 5km radius
   const [showRadiusFilter, setShowRadiusFilter] = useState(false);
-  
-  // Use ref to track selecting location state for map click handler
-  const isSelectingLocationRef = useRef(false);
-  useEffect(() => {
-    isSelectingLocationRef.current = isSelectingLocation;
-  }, [isSelectingLocation]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -118,15 +111,8 @@ function MapPageContent() {
       };
       setMapCenter(newCenter);
       setSearchedLocation(newCenter);
-      
-      // If in location selection mode, use the searched place as selected location
-      if (isSelectingLocation) {
-        setSelectedLocation(newCenter);
-        setIsSelectingLocation(false);
-        setShowRadiusFilter(true);
-      }
     }
-  }, [isSelectingLocation]);
+  }, []);
   
   const handleMapDragEnd = useCallback((center: { lat: number; lng: number }) => {
   }, []);
@@ -167,19 +153,12 @@ function MapPageContent() {
     
     setFilteredVenues(filtered);
   }, [venues, selectedLocation, searchRadius, showRadiusFilter]);
+
+  // Calculate total exhibitions in filtered venues
+  const totalExhibitions = filteredVenues.reduce((total, venue) => {
+    return total + (venue.exhibitionCount || 0);
+  }, 0);
   
-  // Handle map click for location selection
-  const handleMapClick = useCallback((location: { lat: number; lng: number }) => {
-    console.log('Map clicked at:', location);
-    console.log('isSelectingLocation:', isSelectingLocation);
-    console.log('isSelectingLocationRef.current:', isSelectingLocationRef.current);
-    
-    if (isSelectingLocationRef.current) {
-      setSelectedLocation(location);
-      setIsSelectingLocation(false);
-      setShowRadiusFilter(true);
-    }
-  }, [isSelectingLocation]);
 
   const mapMarkers = filteredVenues.map(venue => ({
     id: venue._id,
@@ -258,16 +237,6 @@ function MapPageContent() {
                   Near Search
                 </button>
               )}
-              <button
-                onClick={() => setIsSelectingLocation(true)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  isSelectingLocation
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {isSelectingLocation ? 'Click map or search address' : 'Choose Location'}
-              </button>
             </div>
             
             {/* Radius Slider */}
@@ -288,8 +257,9 @@ function MapPageContent() {
             
             {/* Results count */}
             {showRadiusFilter && (
-              <div className="text-sm text-gray-600">
-                Found {filteredVenues.length} venue{filteredVenues.length !== 1 ? 's' : ''} within radius
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>Found {filteredVenues.length} venue{filteredVenues.length !== 1 ? 's' : ''} within {searchRadius} km radius</div>
+                <div className="text-rose-600 font-medium">{totalExhibitions} exhibition{totalExhibitions !== 1 ? 's' : ''} available</div>
               </div>
             )}
           </div>
@@ -304,12 +274,6 @@ function MapPageContent() {
             <div className="p-4 sm:p-6 text-red-500">{error}</div>
           ) : (
             <div className="relative">
-              {/* Show instruction overlay when selecting location */}
-              {isSelectingLocation && (
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
-                  <p className="text-sm font-medium">Click anywhere on the map or search for an address above</p>
-                </div>
-              )}
               <div className="h-[calc(100vh-200px)] sm:h-[500px] md:h-[600px] lg:h-[700px]">
                 <EnhancedGoogleMap
                   apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
@@ -324,7 +288,6 @@ function MapPageContent() {
                   showSearchBox={true}
                   onPlaceSelected={handlePlaceSelected}
                   onMarkerClick={handleMarkerClick}
-                  onClick={handleMapClick}
                   height="100%"
                 />
               </div>

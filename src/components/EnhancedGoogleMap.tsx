@@ -39,7 +39,6 @@ interface EnhancedGoogleMapProps {
   showSearchBox?: boolean;
   onPlaceSelected?: (place: google.maps.places.PlaceResult) => void;
   onMarkerClick?: (markerId: string) => void;
-  onClick?: (location: { lat: number; lng: number }) => void;
 }
 
 export default function EnhancedGoogleMap({ 
@@ -56,7 +55,6 @@ export default function EnhancedGoogleMap({
   showSearchBox = false,
   onPlaceSelected,
   onMarkerClick,
-  onClick,
 }: EnhancedGoogleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -577,29 +575,6 @@ export default function EnhancedGoogleMap({
         }
       }
 
-      // Add click listener with timeout to avoid double-click conflicts
-      let clickTimeout: NodeJS.Timeout | null = null;
-      
-      map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (clickTimeout) clearTimeout(clickTimeout);
-        
-        clickTimeout = setTimeout(() => {
-          console.log('Map clicked - raw event:', e);
-          if (e.latLng && onClick) {
-            const clickLocation = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-            console.log('Map clicked at location:', clickLocation);
-            onClick(clickLocation);
-          }
-        }, 200); // 200ms delay to differentiate from double-click
-      });
-      
-      // Clear timeout on double-click
-      map.addListener('dblclick', () => {
-        if (clickTimeout) {
-          clearTimeout(clickTimeout);
-          clickTimeout = null;
-        }
-      });
 
       // Add markers
       for (const marker of markers) {
@@ -611,7 +586,7 @@ export default function EnhancedGoogleMap({
     } catch (error) {
       console.error('Error initializing map:', error);
     }
-  }, [apiKey, center, zoom, showSearchBox, onPlaceSelected, markers, addEnhancedMarker, updateUserMarker, updateSelectedLocation, updateSearchLocationMarker, onClick]);
+  }, [apiKey, center, zoom, showSearchBox, onPlaceSelected, markers, addEnhancedMarker, updateUserMarker, updateSelectedLocation, updateSearchLocationMarker]);
 
   // Update markers when data changes
   useEffect(() => {
