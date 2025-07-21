@@ -64,7 +64,6 @@ export default function EnhancedGoogleMap({
   const selectedLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const placeAutocompleteRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
 
   // Helper function to get the day name
   const getDayName = () => {
@@ -435,83 +434,78 @@ export default function EnhancedGoogleMap({
         mapTypeControl: true,
         streetViewControl: true,
         fullscreenControl: true,
+        clickableIcons: false, // Disable POI clicks to avoid conflicts
       });
       mapInstanceRef.current = map;
       
       infoWindowRef.current = new google.maps.InfoWindow();
 
-      // Setup search box with new PlaceAutocompleteElement
+      // Setup search box - fallback to simple geocoding
       if (showSearchBox && searchContainerRef.current && onPlaceSelected) {
-        // Create PlaceAutocompleteElement
-        const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
-          locationRestriction: map.getBounds() || undefined,
-        });
+        // Create a simple input for now
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search for a place or address...';
+        searchInput.className = 'w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500';
         
-        placeAutocompleteRef.current = placeAutocomplete;
-        searchContainerRef.current.appendChild(placeAutocomplete);
-
-        // Add custom styling to match the design
-        placeAutocomplete.classList.add('w-full');
+        searchContainerRef.current.appendChild(searchInput);
         
-        // Apply styles after element is rendered
-        setTimeout(() => {
-          const input = placeAutocomplete.querySelector('input');
-          if (input) {
-            input.placeholder = "Search for a place or address...";
-            input.className = "w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500";
-            input.style.width = '100%';
-            input.style.boxSizing = 'border-box';
+        // Simple geocoding on enter
+        searchInput.addEventListener('keypress', async (e) => {
+          if (e.key === 'Enter') {
+            const query = (e.target as HTMLInputElement).value;
+            if (!query) return;
+            
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: query }, (results, status) => {
+              if (status === 'OK' && results && results[0]) {
+                const result = results[0];
+                const location = result.geometry.location;
+                
+                // Create PlaceResult object
+                const placeResult: google.maps.places.PlaceResult = {
+                  geometry: {
+                    location: location,
+                  },
+                  name: query,
+                  formatted_address: result.formatted_address,
+                };
+                
+                if (onPlaceSelected) {
+                  onPlaceSelected(placeResult);
+                }
+                
+                map.setCenter(location);
+                map.setZoom(15);
+              } else {
+                console.error('Geocode failed:', status);
+              }
+            });
           }
-          
-          // Style the autocomplete container
-          const pacContainer = document.querySelector('.pac-container');
-          if (pacContainer) {
-            (pacContainer as HTMLElement).style.zIndex = '9999';
-          }
-        }, 100);
-
-        // Listen for place selection
-        placeAutocomplete.addEventListener('gmp-placeselect', async (event: any) => {
-          const place = event.place;
-          if (!place.location) {
-            console.log("Place has no location");
-            return;
-          }
-
-          // Get the location
-          const location = await place.location;
-          
-          // Create a PlaceResult-like object for compatibility
-          const placeResult: google.maps.places.PlaceResult = {
-            geometry: {
-              location: location,
-            },
-            name: place.displayName,
-            formatted_address: place.formattedAddress,
-          };
-
-          if (onPlaceSelected) {
-            onPlaceSelected(placeResult);
-          }
-
-          // Center map on selected location
-          map.setCenter(location);
-          map.setZoom(15);
         });
       }
 
-      // Add click listener for location selection
+      // Add click listener with timeout to avoid double-click conflicts
+      let clickTimeout: NodeJS.Timeout | null = null;
+      
       map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        console.log('Map clicked - raw event:', e);
-        if (e.latLng) {
-          const clickLocation = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-          console.log('Map clicked at location:', clickLocation);
-          if (onClick) {
-            console.log('Calling onClick handler');
+        if (clickTimeout) clearTimeout(clickTimeout);
+        
+        clickTimeout = setTimeout(() => {
+          console.log('Map clicked - raw event:', e);
+          if (e.latLng && onClick) {
+            const clickLocation = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+            console.log('Map clicked at location:', clickLocation);
             onClick(clickLocation);
-          } else {
-            console.log('No onClick handler provided');
           }
+        }, 200); // 200ms delay to differentiate from double-click
+      });
+      
+      // Clear timeout on double-click
+      map.addListener('dblclick', () => {
+        if (clickTimeout) {
+          clearTimeout(clickTimeout);
+          clickTimeout = null;
         }
       });
 
@@ -562,9 +556,6 @@ export default function EnhancedGoogleMap({
     }
     
     return () => {
-      if (placeAutocompleteRef.current) {
-        placeAutocompleteRef.current.remove();
-      }
       if (mapInstanceRef.current && window.google?.maps?.event) {
         google.maps.event.clearInstanceListeners(mapInstanceRef.current);
       }
