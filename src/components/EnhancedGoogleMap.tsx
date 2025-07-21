@@ -61,7 +61,6 @@ export default function EnhancedGoogleMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const markerRefs = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
   const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const selectedLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
@@ -501,7 +500,6 @@ export default function EnhancedGoogleMap({
         searchInput.placeholder = 'Search for a place or address...';
         searchInput.className = 'w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500';
         
-        searchInputRef.current = searchInput;
         searchContainerRef.current.appendChild(searchInput);
         
         try {
