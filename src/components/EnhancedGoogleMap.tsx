@@ -462,13 +462,11 @@ export default function EnhancedGoogleMap({
       }
 
       // Add click listener for location selection
-      if (onClick) {
-        map.addListener('click', (e: google.maps.MapMouseEvent) => {
-          if (e.latLng) {
-            onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-          }
-        });
-      }
+      map.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (e.latLng && onClick) {
+          onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+        }
+      });
 
       // Add markers
       for (const marker of markers) {

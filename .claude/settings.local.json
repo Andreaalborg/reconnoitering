@@ -25,7 +25,11 @@
       "Bash(source:*)",
       "Bash(bash -c \"source ~/.nvm/nvm.sh && nvm use 18.17.0 && npm run lint 2>&1 | head -20\")",
       "Bash(bash:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(true)",
+      "WebFetch(domain:render.com)",
+      "WebFetch(domain:vercel.com)"
     ],
     "deny": []
   }
