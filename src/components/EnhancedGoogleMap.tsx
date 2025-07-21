@@ -153,13 +153,13 @@ export default function EnhancedGoogleMap({
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
-        pointer-events: auto;
+        pointer-events: none;
       }
-      .custom-marker:hover .marker-tooltip,
-      .marker-tooltip:hover {
+      .custom-marker:hover .marker-tooltip {
         opacity: 1;
         visibility: visible;
         transition-delay: 0.2s;
+        pointer-events: auto;
       }
       .tooltip-header {
         border-bottom: 1px solid #e5e7eb;

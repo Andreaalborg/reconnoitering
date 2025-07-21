@@ -116,8 +116,15 @@ function MapPageContent() {
         lng: place.geometry.location.lng()
       };
       setMapCenter(newCenter);
+      
+      // If in location selection mode, use the searched place as selected location
+      if (isSelectingLocation) {
+        setSelectedLocation(newCenter);
+        setIsSelectingLocation(false);
+        setShowRadiusFilter(true);
+      }
     }
-  }, []);
+  }, [isSelectingLocation]);
   
   const handleMapDragEnd = useCallback((center: { lat: number; lng: number }) => {
   }, []);
@@ -161,12 +168,16 @@ function MapPageContent() {
   
   // Handle map click for location selection
   const handleMapClick = useCallback((location: { lat: number; lng: number }) => {
+    console.log('Map clicked at:', location);
+    console.log('isSelectingLocation:', isSelectingLocation);
+    console.log('isSelectingLocationRef.current:', isSelectingLocationRef.current);
+    
     if (isSelectingLocationRef.current) {
       setSelectedLocation(location);
       setIsSelectingLocation(false);
       setShowRadiusFilter(true);
     }
-  }, []);
+  }, [isSelectingLocation]);
 
   const mapMarkers = filteredVenues.map(venue => ({
     id: venue._id,
@@ -238,7 +249,7 @@ function MapPageContent() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {isSelectingLocation ? 'Click on map to select location' : 'Choose Location'}
+                {isSelectingLocation ? 'Click map or search address' : 'Choose Location'}
               </button>
             </div>
             
@@ -276,6 +287,12 @@ function MapPageContent() {
             <div className="p-4 sm:p-6 text-red-500">{error}</div>
           ) : (
             <div className="relative">
+              {/* Show instruction overlay when selecting location */}
+              {isSelectingLocation && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
+                  <p className="text-sm font-medium">Click anywhere on the map or search for an address above</p>
+                </div>
+              )}
               <div className="h-[calc(100vh-200px)] sm:h-[500px] md:h-[600px] lg:h-[700px]">
                 <EnhancedGoogleMap
                   apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
