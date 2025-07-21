@@ -58,13 +58,13 @@ export default function EnhancedGoogleMap({
 }: EnhancedGoogleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const markerRefs = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
   const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const selectedLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const placeAutocompleteRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
 
   // Helper function to get the day name
   const getDayName = () => {
@@ -440,31 +440,79 @@ export default function EnhancedGoogleMap({
       
       infoWindowRef.current = new google.maps.InfoWindow();
 
-      // Setup search box
-      if (showSearchBox && searchInputRef.current && onPlaceSelected) {
-        const autocomplete = new google.maps.places.Autocomplete(searchInputRef.current, {
-          fields: ["place_id", "geometry", "name", "formatted_address"],
+      // Setup search box with new PlaceAutocompleteElement
+      if (showSearchBox && searchContainerRef.current && onPlaceSelected) {
+        // Create PlaceAutocompleteElement
+        const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+          locationRestriction: map.getBounds() || undefined,
+          fields: ["location", "displayName", "formattedAddress"],
         });
-        autocompleteRef.current = autocomplete;
         
-        autocomplete.bindTo("bounds", map);
+        placeAutocompleteRef.current = placeAutocomplete;
+        searchContainerRef.current.appendChild(placeAutocomplete);
 
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
+        // Add custom styling to match the design
+        placeAutocomplete.classList.add('w-full');
+        
+        // Apply styles after element is rendered
+        setTimeout(() => {
+          const input = placeAutocomplete.querySelector('input');
+          if (input) {
+            input.placeholder = "Search for a place or address...";
+            input.className = "w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500";
+            input.style.width = '100%';
+            input.style.boxSizing = 'border-box';
+          }
+          
+          // Style the autocomplete container
+          const pacContainer = document.querySelector('.pac-container');
+          if (pacContainer) {
+            (pacContainer as HTMLElement).style.zIndex = '9999';
+          }
+        }, 100);
+
+        // Listen for place selection
+        placeAutocomplete.addEventListener('gmp-placeselect', async (event: any) => {
+          const place = event.place;
+          if (!place.location) {
+            console.log("Place has no location");
+            return;
+          }
+
+          // Get the location
+          const location = await place.location;
+          
+          // Create a PlaceResult-like object for compatibility
+          const placeResult: google.maps.places.PlaceResult = {
+            geometry: {
+              location: location,
+            },
+            name: place.displayName,
+            formatted_address: place.formattedAddress,
+          };
+
           if (onPlaceSelected) {
-            onPlaceSelected(place);
+            onPlaceSelected(placeResult);
           }
-          if (place.geometry && place.geometry.location) {
-            map.setCenter(place.geometry.location);
-            map.setZoom(15);
-          }
+
+          // Center map on selected location
+          map.setCenter(location);
+          map.setZoom(15);
         });
       }
 
       // Add click listener for location selection
       map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (e.latLng && onClick) {
-          onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+        console.log('Map clicked - raw event:', e);
+        if (e.latLng) {
+          const clickLocation = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+          console.log('Map clicked at location:', clickLocation);
+          if (onClick) {
+            console.log('Calling onClick handler');
+            onClick(clickLocation);
+          } else {
+            console.log('No onClick handler provided');
+          }
         }
       });
 
@@ -515,8 +563,8 @@ export default function EnhancedGoogleMap({
     }
     
     return () => {
-      if (autocompleteRef.current && window.google?.maps?.event) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      if (placeAutocompleteRef.current) {
+        placeAutocompleteRef.current.remove();
       }
       if (mapInstanceRef.current && window.google?.maps?.event) {
         google.maps.event.clearInstanceListeners(mapInstanceRef.current);
@@ -547,12 +595,9 @@ export default function EnhancedGoogleMap({
     <div className="relative" style={{ height }}>
       {showSearchBox && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search for a place or address..."
-            className="w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-          />
+          <div ref={searchContainerRef} className="w-full">
+            {/* PlaceAutocompleteElement will be inserted here */}
+          </div>
         </div>
       )}
       <div ref={mapRef} className="w-full h-full rounded-lg" />
