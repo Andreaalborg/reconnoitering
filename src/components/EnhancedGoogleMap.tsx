@@ -445,7 +445,6 @@ export default function EnhancedGoogleMap({
         // Create PlaceAutocompleteElement
         const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
           locationRestriction: map.getBounds() || undefined,
-          fields: ["location", "displayName", "formattedAddress"],
         });
         
         placeAutocompleteRef.current = placeAutocomplete;
