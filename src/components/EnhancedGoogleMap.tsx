@@ -644,7 +644,7 @@ export default function EnhancedGoogleMap({
   // Update search location marker
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-    updateSearchLocationMarker(mapInstanceRef.current, searchedLocation);
+    updateSearchLocationMarker(mapInstanceRef.current, searchedLocation || null);
   }, [searchedLocation, updateSearchLocationMarker]);
 
   // Initialize map on mount
