@@ -32,6 +32,7 @@ interface EnhancedGoogleMapProps {
   markers?: EnhancedMapMarker[];
   userPosition?: { lat: number; lng: number };
   selectedLocation?: { lat: number; lng: number } | null;
+  searchedLocation?: { lat: number; lng: number } | null;
   showRadius?: boolean;
   radiusKm?: number;
   height?: string;
@@ -48,6 +49,7 @@ export default function EnhancedGoogleMap({
   markers = [],
   userPosition,
   selectedLocation,
+  searchedLocation,
   showRadius = false,
   radiusKm = 5,
   height = '500px',
@@ -59,11 +61,14 @@ export default function EnhancedGoogleMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const markerRefs = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
   const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const selectedLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const searchLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   // Helper function to get the day name
   const getDayName = () => {
@@ -343,6 +348,54 @@ export default function EnhancedGoogleMap({
     }
   }, [userPosition]);
 
+  // Function to update search location marker
+  const updateSearchLocationMarker = useCallback(async (map: google.maps.Map | null, location: { lat: number; lng: number } | null) => {
+    if (!map) return;
+    
+    // Clear existing search location marker
+    if (searchLocationMarkerRef.current?.map) {
+      searchLocationMarkerRef.current.map = null;
+    }
+    searchLocationMarkerRef.current = null;
+
+    if (location && google.maps.marker?.AdvancedMarkerElement) {
+      // Create search location marker
+      const searchContent = document.createElement('div');
+      searchContent.innerHTML = `
+        <div style="
+          width: 24px;
+          height: 24px;
+          background: #10b981;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          position: relative;
+        ">
+          <div style="
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            font-weight: 500;
+          ">Search Result</div>
+        </div>
+      `;
+
+      searchLocationMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: location,
+        content: searchContent,
+        zIndex: 998,
+      });
+    }
+  }, []);
+
   // Function to update selected location marker and radius circle
   const updateSelectedLocation = useCallback(async (map: google.maps.Map | null) => {
     if (!map) return;
@@ -440,49 +493,90 @@ export default function EnhancedGoogleMap({
       
       infoWindowRef.current = new google.maps.InfoWindow();
 
-      // Setup search box - fallback to simple geocoding
+      // Setup search box with Autocomplete (if available for existing users)
       if (showSearchBox && searchContainerRef.current && onPlaceSelected) {
-        // Create a simple input for now
+        // Create input element
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.placeholder = 'Search for a place or address...';
         searchInput.className = 'w-full p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500';
         
+        searchInputRef.current = searchInput;
         searchContainerRef.current.appendChild(searchInput);
         
-        // Simple geocoding on enter
-        searchInput.addEventListener('keypress', async (e) => {
-          if (e.key === 'Enter') {
-            const query = (e.target as HTMLInputElement).value;
-            if (!query) return;
+        try {
+          // Try to use Autocomplete (works for existing API users)
+          const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+            fields: ['place_id', 'geometry', 'name', 'formatted_address'],
+          });
+          
+          autocompleteRef.current = autocomplete;
+          autocomplete.bindTo('bounds', map);
+          
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            console.log('Place selected:', place);
             
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: query }, (results, status) => {
-              if (status === 'OK' && results && results[0]) {
-                const result = results[0];
-                const location = result.geometry.location;
-                
-                // Create PlaceResult object
-                const placeResult: google.maps.places.PlaceResult = {
-                  geometry: {
-                    location: location,
-                  },
-                  name: query,
-                  formatted_address: result.formatted_address,
-                };
-                
-                if (onPlaceSelected) {
-                  onPlaceSelected(placeResult);
-                }
-                
-                map.setCenter(location);
-                map.setZoom(15);
-              } else {
-                console.error('Geocode failed:', status);
+            if (place.geometry?.location) {
+              const location = {
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng()
+              };
+              
+              // Add search location marker
+              updateSearchLocationMarker(map, location);
+              
+              if (onPlaceSelected) {
+                onPlaceSelected(place);
               }
-            });
-          }
-        });
+              
+              map.setCenter(location);
+              map.setZoom(15);
+            }
+          });
+          
+        } catch (error) {
+          console.warn('Autocomplete not available, falling back to geocoding:', error);
+          
+          // Fallback to geocoding on enter
+          searchInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+              const query = (e.target as HTMLInputElement).value;
+              if (!query) return;
+              
+              const geocoder = new google.maps.Geocoder();
+              geocoder.geocode({ address: query }, (results, status) => {
+                if (status === 'OK' && results && results[0]) {
+                  const result = results[0];
+                  const location = result.geometry.location;
+                  const locationObj = {
+                    lat: location.lat(),
+                    lng: location.lng()
+                  };
+                  
+                  // Add search location marker
+                  updateSearchLocationMarker(map, locationObj);
+                  
+                  const placeResult: google.maps.places.PlaceResult = {
+                    geometry: { location: location },
+                    name: query,
+                    formatted_address: result.formatted_address,
+                  };
+                  
+                  if (onPlaceSelected) {
+                    onPlaceSelected(placeResult);
+                  }
+                  
+                  map.setCenter(location);
+                  map.setZoom(15);
+                } else {
+                  console.error('Geocode failed:', status);
+                  alert('Could not find location. Please try a different search term.');
+                }
+              });
+            }
+          });
+        }
       }
 
       // Add click listener with timeout to avoid double-click conflicts
@@ -519,7 +613,7 @@ export default function EnhancedGoogleMap({
     } catch (error) {
       console.error('Error initializing map:', error);
     }
-  }, [apiKey, center, zoom, showSearchBox, onPlaceSelected, markers, addEnhancedMarker, updateUserMarker, updateSelectedLocation, onClick]);
+  }, [apiKey, center, zoom, showSearchBox, onPlaceSelected, markers, addEnhancedMarker, updateUserMarker, updateSelectedLocation, updateSearchLocationMarker, onClick]);
 
   // Update markers when data changes
   useEffect(() => {
@@ -549,6 +643,12 @@ export default function EnhancedGoogleMap({
     updateSelectedLocation(mapInstanceRef.current);
   }, [selectedLocation, showRadius, radiusKm, updateSelectedLocation]);
 
+  // Update search location marker
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    updateSearchLocationMarker(mapInstanceRef.current, searchedLocation);
+  }, [searchedLocation, updateSearchLocationMarker]);
+
   // Initialize map on mount
   useEffect(() => {
     if (!mapInstanceRef.current) {
@@ -556,6 +656,9 @@ export default function EnhancedGoogleMap({
     }
     
     return () => {
+      if (autocompleteRef.current && window.google?.maps?.event) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
       if (mapInstanceRef.current && window.google?.maps?.event) {
         google.maps.event.clearInstanceListeners(mapInstanceRef.current);
       }
@@ -569,6 +672,11 @@ export default function EnhancedGoogleMap({
         userMarkerRef.current.map = null;
       }
       userMarkerRef.current = null;
+      
+      if (searchLocationMarkerRef.current?.map) {
+        searchLocationMarkerRef.current.map = null;
+      }
+      searchLocationMarkerRef.current = null;
       
       infoWindowRef.current?.close();
     };

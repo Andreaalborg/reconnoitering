@@ -40,6 +40,7 @@ function MapPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | undefined>(undefined);
+  const [searchedLocation, setSearchedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [initialCenterSet, setInitialCenterSet] = useState(false);
   
   // Location selection mode
@@ -116,6 +117,7 @@ function MapPageContent() {
         lng: place.geometry.location.lng()
       };
       setMapCenter(newCenter);
+      setSearchedLocation(newCenter);
       
       // If in location selection mode, use the searched place as selected location
       if (isSelectingLocation) {
@@ -241,6 +243,21 @@ function MapPageContent() {
               >
                 Near Me
               </button>
+              {searchedLocation && (
+                <button
+                  onClick={() => {
+                    setSelectedLocation(searchedLocation);
+                    setShowRadiusFilter(true);
+                  }}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    showRadiusFilter && selectedLocation?.lat === searchedLocation?.lat
+                      ? 'bg-emerald-500 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Near Search
+                </button>
+              )}
               <button
                 onClick={() => setIsSelectingLocation(true)}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -301,6 +318,7 @@ function MapPageContent() {
                   markers={mapMarkers}
                   userPosition={userPosition}
                   selectedLocation={selectedLocation}
+                  searchedLocation={searchedLocation}
                   showRadius={showRadiusFilter}
                   radiusKm={searchRadius}
                   showSearchBox={true}
