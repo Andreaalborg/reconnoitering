@@ -5,7 +5,7 @@ export function checkRateLimit(
   identifier: string,
   maxAttempts: number = 5,
   windowMs: number = 60 * 60 * 1000 // 1 hour default
-): boolean {
+): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();
   const userLimit = rateLimitMap.get(identifier);
 
@@ -15,16 +15,17 @@ export function checkRateLimit(
       count: 1,
       resetTime: now + windowMs,
     });
-    return true;
+    return { allowed: true };
   }
 
   if (userLimit.count >= maxAttempts) {
-    return false; // Rate limit exceeded
+    const retryAfter = Math.ceil((userLimit.resetTime - now) / 1000); // seconds
+    return { allowed: false, retryAfter };
   }
 
   // Increment count
   userLimit.count++;
-  return true;
+  return { allowed: true };
 }
 
 // Clean up old entries periodically

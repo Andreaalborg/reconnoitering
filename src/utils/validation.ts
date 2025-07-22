@@ -6,6 +6,64 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
+// Alias for backwards compatibility
+export const validateEmail = isValidEmail;
+
+// Password validation
+export function validatePassword(password: string): { 
+  isValid: boolean; 
+  score: number; 
+  errors: string[];
+  feedback: string;
+} {
+  const errors: string[] = [];
+  let score = 0;
+
+  // Length check
+  if (password.length >= 8) {
+    score += 1;
+  } else {
+    errors.push('Password must be at least 8 characters long');
+  }
+
+  // Uppercase letter
+  if (/[A-Z]/.test(password)) {
+    score += 1;
+  } else {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+
+  // Lowercase letter
+  if (/[a-z]/.test(password)) {
+    score += 1;
+  } else {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+
+  // Numbers
+  if (/\d/.test(password)) {
+    score += 1;
+  } else {
+    errors.push('Password must contain at least one number');
+  }
+
+  // Special characters
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    score += 1;
+  } else {
+    errors.push('Password must contain at least one special character');
+  }
+
+  const feedback = errors.join(' ');
+
+  return {
+    isValid: score >= 3, // Require at least 3 out of 5 criteria
+    score,
+    errors,
+    feedback
+  };
+}
+
 // MongoDB ObjectId validation
 export function isValidObjectId(id: string): boolean {
   const objectIdRegex = /^[0-9a-fA-F]{24}$/;

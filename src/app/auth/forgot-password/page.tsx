@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Mail, ArrowLeft } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -43,11 +42,7 @@ export default function ForgotPasswordPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full space-y-8 text-center"
-        >
+        <div className="max-w-md w-full space-y-8 text-center">
           <div className="bg-white p-8 rounded-lg shadow-md">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
               <Mail className="h-6 w-6 text-green-600" />
@@ -66,18 +61,14 @@ export default function ForgotPasswordPage() {
               Back to login
             </Link>
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-8"
-      >
+      <div className="max-w-md w-full space-y-8">
         <div>
           <Link
             href="/auth/login"
@@ -146,7 +137,7 @@ export default function ForgotPasswordPage() {
             </span>
           </div>
         </form>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -1,16 +1,11 @@
 // src/app/newsletter/error/page.tsx
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { AlertCircle, Mail, ArrowRight } from 'lucide-react';
 
 export default function NewsletterErrorPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full text-center"
-      >
+      <div className="max-w-md w-full text-center">
         <div className="bg-white p-8 rounded-lg shadow-md">
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
             <AlertCircle className="h-8 w-8 text-red-600" />
@@ -51,7 +46,7 @@ export default function NewsletterErrorPage() {
             </Link>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

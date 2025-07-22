@@ -1,16 +1,11 @@
 // src/app/newsletter/unsubscribed/page.tsx
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { CheckCircle2, Heart, ArrowRight } from 'lucide-react';
 
 export default function NewsletterUnsubscribedPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full text-center"
-      >
+      <div className="max-w-md w-full text-center">
         <div className="bg-white p-8 rounded-lg shadow-md">
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-6">
             <CheckCircle2 className="h-8 w-8 text-gray-600" />
@@ -61,7 +56,7 @@ export default function NewsletterUnsubscribedPage() {
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
