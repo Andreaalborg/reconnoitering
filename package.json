@@ -21,6 +21,7 @@
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.4.7",
     "express-rate-limit": "^7.5.0",
+    "framer-motion": "^12.23.6",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.517.0",
     "mapbox-gl": "^3.10.0",
