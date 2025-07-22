@@ -179,6 +179,30 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-api-key
   - Use small text or red color for emphasis
   - Make closure information more prominent
 
+#### 🔐 Authentication & Contact Features (High Priority)
+- [ ] **Password Reset Functionality**
+  - [ ] Add "Forgot Password" link to login page
+  - [ ] Create forgot password page (/auth/forgot-password)
+  - [ ] Implement password reset API routes
+  - [ ] Add password reset email templates
+  - [ ] Test complete password reset flow
+
+- [ ] **Contact Forms & Newsletter Integration**  
+  - [ ] Create contact form API endpoint (/api/contact)
+  - [ ] Implement newsletter subscription API (/api/newsletter/subscribe)
+  - [ ] Connect footer newsletter form to backend
+  - [ ] Add GoHighLevel integration for form submissions
+  - [ ] Add email validation and spam protection
+  - [ ] Create unsubscribe functionality
+
+- [ ] **OAuth Social Login (Google/Facebook)**
+  - [ ] Add Google OAuth provider to NextAuth config
+  - [ ] Add Facebook OAuth provider to NextAuth config
+  - [ ] Create social login buttons for login/register pages
+  - [ ] Set up OAuth environment variables
+  - [ ] Update User model for OAuth account linking
+  - [ ] Test Google and Facebook login flows
+
 #### New Tasks
 - [ ] Add transport planning between venues
 - [ ] Integrate location selection in /exhibitions and /day-planner

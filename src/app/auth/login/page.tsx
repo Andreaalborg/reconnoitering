@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import SocialLoginButtons from '@/components/auth/SocialLoginButtons';
 
 // Create a client component for the parts that use useSearchParams
 function LoginForm() {
@@ -128,6 +129,10 @@ function LoginForm() {
         </div>
       </form>
       
+      <div className="mt-6">
+        <SocialLoginButtons />
+      </div>
+      
       <div className="mt-6 text-center space-y-3">
         <p className="text-[var(--text-muted)]">
           Don&apos;t have an account?{' '}
@@ -135,10 +140,9 @@ function LoginForm() {
             Create Account
           </Link>
         </p>
-        {/* Future password reset link */}
-        {/* <Link href="/auth/forgot-password" className="text-sm text-[var(--text-muted)] hover:text-[var(--primary)]">
+        <Link href="/auth/forgot-password" className="text-sm text-[var(--text-muted)] hover:text-[var(--primary)]">
           Forgot your password?
-        </Link> */}
+        </Link>
       </div>
     </div>
   );

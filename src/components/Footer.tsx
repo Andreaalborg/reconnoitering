@@ -1,8 +1,41 @@
 import Link from 'next/link';
+import { useState } from 'react';
 import { Mail, Instagram, Twitter, Facebook, Linkedin } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'footer' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to subscribe');
+      }
+
+      setMessage(data.message);
+      setEmail('');
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <footer className="bg-[var(--primary)] text-white mt-20">
@@ -163,18 +196,44 @@ const Footer = () => {
               </p>
             </div>
             <div>
-              <form className="flex flex-col sm:flex-row gap-3">
+              {/* Success/Error Messages */}
+              {message && (
+                <div className="mb-4 p-3 bg-green-500/20 border border-green-400/30 rounded-lg text-green-100 text-sm">
+                  {message}
+                </div>
+              )}
+              {error && (
+                <div className="mb-4 p-3 bg-red-500/20 border border-red-400/30 rounded-lg text-red-100 text-sm">
+                  {error}
+                </div>
+              )}
+              
+              <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg placeholder-gray-400 text-white focus:outline-none focus:border-white/40 transition-colors"
+                  required
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg placeholder-gray-400 text-white focus:outline-none focus:border-white/40 transition-colors disabled:opacity-50"
                 />
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-white text-[var(--primary)] rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                  disabled={loading}
+                  className="px-6 py-2 bg-white text-[var(--primary)] rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Mail className="w-4 h-4" />
-                  Subscribe
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--primary)]"></div>
+                      Subscribing...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      Subscribe
+                    </>
+                  )}
                 </button>
               </form>
             </div>

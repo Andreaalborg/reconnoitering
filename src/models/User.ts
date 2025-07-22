@@ -13,6 +13,8 @@ export interface IUser extends Document {
   verificationTokenExpires?: Date;
   resetPasswordToken?: string;
   resetPasswordTokenExpires?: Date;
+  oauthProvider?: 'google' | 'facebook' | 'credentials';
+  oauthId?: string;
   favoriteExhibitions?: string[];
   preferences?: {
     preferredTags?: string[];
@@ -62,6 +64,14 @@ const UserSchema: Schema = new Schema({
   },
   resetPasswordTokenExpires: {
     type: Date
+  },
+  oauthProvider: {
+    type: String,
+    enum: ['google', 'facebook', 'credentials'],
+    default: 'credentials'
+  },
+  oauthId: {
+    type: String
   },
   favoriteExhibitions: [{
     type: mongoose.Schema.Types.ObjectId,

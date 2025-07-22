@@ -1,4 +1,6 @@
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
+import FacebookProvider from 'next-auth/providers/facebook';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { NextAuthOptions } from 'next-auth';
@@ -13,6 +15,26 @@ if (!process.env.NEXTAUTH_SECRET) {
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    // Google OAuth Provider
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
+    }),
+    
+    // Facebook OAuth Provider
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID || '',
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || '',
+    }),
+    
+    // Existing Credentials Provider
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -57,18 +79,59 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/login',
   },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async signIn({ user, account, profile }) {
+      // Handle OAuth sign in
+      if (account?.provider === 'google' || account?.provider === 'facebook') {
+        await dbConnect();
+        
+        try {
+          // Check if user exists
+          let dbUser = await User.findOne({ email: user.email });
+          
+          if (!dbUser) {
+            // Create new user for OAuth sign in
+            dbUser = await User.create({
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              emailVerified: true, // OAuth users are pre-verified
+              password: 'oauth_user_no_password', // OAuth users don't need passwords
+              role: 'user',
+            });
+          } else {
+            // Update existing user's image if provided by OAuth
+            if (user.image && !dbUser.image) {
+              dbUser.image = user.image;
+              await dbUser.save();
+            }
+          }
+          
+          // Store the database user ID for the JWT callback
+          user.id = dbUser._id.toString();
+          user.role = dbUser.role;
+          
+          return true;
+        } catch (error) {
+          console.error('OAuth sign in error:', error);
+          return false;
+        }
+      }
+      
+      return true; // Allow sign in for credentials provider
+    },
+    async jwt({ token, user, account, trigger, session }) {
       // Initial sign in
       if (user) {
         token.id = user.id;
-        token.role = user.role;
-        token.image = user.image; // Add image to token
+        token.role = user.role || 'user';
+        token.image = user.image;
+        token.provider = account?.provider || 'credentials';
       }
       
       // Handle updates when the session is modified
       if (trigger === "update" && session) {
         if (session.user.name) token.name = session.user.name;
-        if (session.user.image) token.picture = session.user.image; // NextAuth uses 'picture' for images
+        if (session.user.image) token.picture = session.user.image;
       }
       
       return token;
@@ -78,6 +141,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.image = (token.picture as string | null | undefined) || (token.image as string | null | undefined);
+        session.user.provider = token.provider as string;
       }
       return session;
     }

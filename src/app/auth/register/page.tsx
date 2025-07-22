@@ -4,6 +4,7 @@ import { useState, Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { validatePassword, getPasswordStrength } from '@/utils/passwordValidation';
+import SocialLoginButtons from '@/components/auth/SocialLoginButtons';
 
 function RegisterForm() {
   const [name, setName] = useState('');
@@ -190,6 +191,10 @@ function RegisterForm() {
           </button>
         </div>
       </form>
+      
+      <div className="mt-6">
+        <SocialLoginButtons />
+      </div>
       
       <div className="mt-6 text-center">
         <p className="text-[var(--text-muted)]">
