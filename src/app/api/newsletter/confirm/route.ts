@@ -1,4 +1,6 @@
 // src/app/api/newsletter/confirm/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Newsletter from '@/models/Newsletter';

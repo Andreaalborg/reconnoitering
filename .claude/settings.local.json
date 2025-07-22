@@ -29,7 +29,8 @@
       "Bash(npm run type-check:*)",
       "Bash(true)",
       "WebFetch(domain:render.com)",
-      "WebFetch(domain:vercel.com)"
+      "WebFetch(domain:vercel.com)",
+      "Bash(tail:*)"
     ],
     "deny": []
   }
