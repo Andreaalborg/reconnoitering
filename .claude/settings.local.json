@@ -30,7 +30,8 @@
       "Bash(true)",
       "WebFetch(domain:render.com)",
       "WebFetch(domain:vercel.com)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "WebFetch(domain:reconnoitering.netlify.app)"
     ],
     "deny": []
   }

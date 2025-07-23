@@ -64,6 +64,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error(`This account uses ${providers} login. Please use the social login button instead.`);
         }
         
+        // Check for old OAuth password placeholder
+        if (user.password === 'oauth_user_no_password') {
+          throw new Error('This account uses social login. Please use the Google or Facebook login button.');
+        }
+        
         // Verifiser passord med bcrypt
         const isValidPassword = await bcrypt.compare(credentials.password, user.password);
         
@@ -83,6 +88,7 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/auth/login',
+    error: '/auth/error',
   },
   callbacks: {
     async signIn({ user, account, profile }) {
