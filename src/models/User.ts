@@ -13,7 +13,8 @@ export interface IUser extends Document {
   verificationTokenExpires?: Date;
   resetPasswordToken?: string;
   resetPasswordTokenExpires?: Date;
-  oauthProvider?: 'google' | 'facebook' | 'credentials';
+  oauthProviders?: string[]; // Array to support multiple OAuth providers
+  oauthProvider?: 'google' | 'facebook' | 'credentials'; // Keep for backwards compatibility
   oauthId?: string;
   favoriteExhibitions?: string[];
   preferences?: {
@@ -64,6 +65,10 @@ const UserSchema: Schema = new Schema({
   },
   resetPasswordTokenExpires: {
     type: Date
+  },
+  oauthProviders: {
+    type: [String],
+    default: []
   },
   oauthProvider: {
     type: String,

@@ -58,6 +58,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Please verify your email before logging in');
         }
         
+        // Check if this user has OAuth providers linked
+        if (user.oauthProviders && user.oauthProviders.length > 0) {
+          const providers = user.oauthProviders.join(' or ');
+          throw new Error(`This account uses ${providers} login. Please use the social login button instead.`);
+        }
+        
         // Verifiser passord med bcrypt
         const isValidPassword = await bcrypt.compare(credentials.password, user.password);
         
@@ -89,21 +95,24 @@ export const authOptions: NextAuthOptions = {
           let dbUser = await User.findOne({ email: user.email });
           
           if (!dbUser) {
-            // Create new user for OAuth sign in
-            dbUser = await User.create({
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              emailVerified: true, // OAuth users are pre-verified
-              password: 'oauth_user_no_password', // OAuth users don't need passwords
-              role: 'user',
-            });
+            // OAuth can only link to existing accounts, not create new ones
+            console.log(`OAuth sign-in attempted for non-existing user: ${user.email}`);
+            return false; // This will redirect to error page
           } else {
-            // Update existing user's image if provided by OAuth
+            // Link OAuth to existing user
             if (user.image && !dbUser.image) {
               dbUser.image = user.image;
-              await dbUser.save();
             }
+            
+            // Mark that this user now has OAuth enabled
+            if (!dbUser.oauthProviders) {
+              dbUser.oauthProviders = [];
+            }
+            if (!dbUser.oauthProviders.includes(account.provider)) {
+              dbUser.oauthProviders.push(account.provider);
+            }
+            
+            await dbUser.save();
           }
           
           // Store the database user ID for the JWT callback

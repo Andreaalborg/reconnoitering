@@ -14,12 +14,21 @@ export default function SocialLoginButtons() {
     setLoadingProvider(provider);
     
     try {
-      await signIn(provider, {
+      const result = await signIn(provider, {
         callbackUrl,
-        redirect: true,
+        redirect: false, // Don't auto redirect to handle errors
       });
+      
+      if (result?.error) {
+        alert(`Login failed: Please register an account first before using ${provider} login.`);
+        setLoadingProvider(null);
+      } else if (result?.url) {
+        // Successful login, redirect manually
+        window.location.href = result.url;
+      }
     } catch (error) {
       console.error(`${provider} login error:`, error);
+      alert(`Login failed: Please register an account first before using ${provider} login.`);
       setLoadingProvider(null);
     }
   };
